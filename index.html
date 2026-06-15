@@ -2,17 +2,12 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>教練數據管理系統 - 生理年齡版</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>教練數據管理系統 - 最終修復版</title>
     <style>
         body { font-family: sans-serif; background-color: #f4f7f6; padding: 20px; }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        input, select { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        input, select { padding: 10px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
         button { padding: 10px 15px; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px; }
-        .chart-container { height: 300px; width: 100%; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        th { background: #3498db; color: white; }
     </style>
 </head>
 <body>
@@ -21,16 +16,16 @@
     <h1>教練數據管理系統</h1>
 
     <div class="card">
-        <h2>學員管理</h2>
+        <h2>1. 學員管理</h2>
         <select id="studentSelect" onchange="onStudentChange()"><option value="">-- 請選擇學員 --</option></select>
         <input type="text" id="newStudentName" placeholder="姓名">
         <input type="number" id="newStudentAge" placeholder="年齡">
         <input type="number" id="newStudentHeight" placeholder="身高(cm)">
-        <button onclick="addOrUpdateStudent()">新增或更新學員</button>
+        <button onclick="saveStudent()">新增 / 更新學員</button>
     </div>
 
     <div class="card">
-        <h2>紀錄數據</h2>
+        <h2>2. 紀錄生理數據</h2>
         <form id="dataForm" onsubmit="saveRecord(event)">
             <input type="date" id="recordDate" required>
             <input type="number" id="weight" placeholder="體重(kg)" step="0.1" required>
@@ -42,105 +37,77 @@
             <button type="submit">儲存紀錄</button>
         </form>
     </div>
-
-    <div class="card">
-        <h2>數據趨勢圖</h2>
-        <div id="chartStatus" style="color:red;">(請選擇學員並輸入至少兩筆數據以顯示圖表)</div>
-        <div class="chart-container"><canvas id="myChart"></canvas></div>
-    </div>
-
-    <div class="card">
-        <h2>歷史紀錄表格</h2>
-        <table id="historyTable">
-            <thead>
-                <tr>
-                    <th>日期</th><th>體重</th><th>脂肪%</th><th>內臟脂</th><th>代謝</th><th>生理年齡</th><th>水分%</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
 </div>
 
 <script>
-    let systemData = JSON.parse(localStorage.getItem('coach_system_data')) || { students: {}, records: {} };
-    let chartInstance = null;
-
-    function addOrUpdateStudent() {
-        const name = document.getElementById('newStudentName').value;
-        const age = document.getElementById('newStudentAge').value;
-        const height = document.getElementById('newStudentHeight').value;
-        if (!name || !age || !height) return alert('請填寫完整資訊');
-        systemData.students[name] = { age, height };
-        if (!systemData.records[name]) systemData.records[name] = [];
-        localStorage.setItem('coach_system_data', JSON.stringify(systemData));
-        updateStudentDropdown(name);
-        alert('學員 ' + name + ' 已儲存！');
+    // 嚴格初始化檢查
+    let systemData = JSON.parse(localStorage.getItem('coach_system_data'));
+    if (!systemData || typeof systemData !== 'object' || !systemData.students) {
+        systemData = { students: {}, records: {} };
     }
 
-    function updateStudentDropdown(selectedName = "") {
+    function saveStudent() {
+        const name = document.getElementById('newStudentName').value.trim();
+        const age = document.getElementById('newStudentAge').value;
+        const height = document.getElementById('newStudentHeight').value;
+
+        if (!name || !age || !height) return alert('請完整填寫姓名、年齡及身高');
+
+        // 確保結構存在
+        if (!systemData.students) systemData.students = {};
+        if (!systemData.records) systemData.records = {};
+
+        systemData.students[name] = { age, height };
+        if (!systemData.records[name]) systemData.records[name] = [];
+
+        localStorage.setItem('coach_system_data', JSON.stringify(systemData));
+        updateDropdown();
+        alert('學員 ' + name + ' 已成功儲存！');
+    }
+
+    function updateDropdown() {
         const select = document.getElementById('studentSelect');
         select.innerHTML = '<option value="">-- 請選擇學員 --</option>';
-        Object.keys(systemData.students).forEach(name => {
-            select.innerHTML += `<option value="${name}" ${name === selectedName ? 'selected' : ''}>${name}</option>`;
-        });
+        if (systemData.students) {
+            Object.keys(systemData.students).forEach(name => {
+                select.innerHTML += `<option value="${name}">${name}</option>`;
+            });
+        }
     }
 
     function onStudentChange() {
         const name = document.getElementById('studentSelect').value;
-        if (name && systemData.students[name]) {
+        if (name && systemData.students && systemData.students[name]) {
             const s = systemData.students[name];
             document.getElementById('newStudentName').value = name;
             document.getElementById('newStudentAge').value = s.age;
             document.getElementById('newStudentHeight').value = s.height;
-            renderAll(name);
         }
     }
 
     function saveRecord(e) {
         e.preventDefault();
         const name = document.getElementById('studentSelect').value;
-        if (!name) return alert('請先選擇學員');
-        
-        const record = {
+        if (!name) return alert('請先選擇學員！');
+
+        const rec = {
             date: document.getElementById('recordDate').value,
             weight: document.getElementById('weight').value,
             bodyFat: document.getElementById('bodyFat').value,
             visceralFat: document.getElementById('visceralFat').value,
             bmr: document.getElementById('bmr').value,
-            metabolicAge: document.getElementById('metabolicAge').value, // 這裡變數名稱維持，但介面已改名
+            metabolicAge: document.getElementById('metabolicAge').value,
             water: document.getElementById('water').value
         };
-        
-        systemData.records[name].push(record);
-        localStorage.setItem('coach_system_data', JSON.stringify(systemData));
-        renderAll(name);
-        alert('儲存成功！');
-    }
 
-    function renderAll(name) {
-        const records = systemData.records[name];
-        const tbody = document.querySelector('#historyTable tbody');
-        tbody.innerHTML = records.map(r => `<tr><td>${r.date}</td><td>${r.weight}</td><td>${r.bodyFat}</td><td>${r.visceralFat}</td><td>${r.bmr}</td><td>${r.metabolicAge}</td><td>${r.water}</td></tr>`).join('');
-        
-        // 畫圖邏輯
-        const ctx = document.getElementById('myChart').getContext('2d');
-        if (chartInstance) chartInstance.destroy();
-        if (records.length >= 2) {
-            document.getElementById('chartStatus').innerHTML = "";
-            chartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: records.map(r => r.date),
-                    datasets: [{ label: '體重 (kg)', data: records.map(r => r.weight), borderColor: '#3498db' }]
-                }
-            });
-        }
+        systemData.records[name].push(rec);
+        localStorage.setItem('coach_system_data', JSON.stringify(systemData));
+        alert('紀錄已儲存');
     }
 
     window.onload = () => {
         document.getElementById('recordDate').valueAsDate = new Date();
-        updateStudentDropdown();
+        updateDropdown();
     };
 </script>
 </body>
