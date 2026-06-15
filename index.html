@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教練專用 - 學員身體成份數據追蹤系統</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --bg-color: #f8f9fa;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1, h2 {
+            color: var(--primary-color);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover { background-color: #2980b9; }
+        .flex-btn {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .comparison-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .comp-card {
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .up { background-color: #fde8e8; color: var(--danger-color); }
+        .down { background-color: #eafaf1; color: var(--success-color); }
+        .neutral { background-color: #f0f3f4; color: #7f8c8d; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th { background-color: var(--primary-color); color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>學員身體成份數據追蹤系統 (教練版)</h1>
+    
+    <div class="card">
+        <h2>1. 選擇 / 新增學員</h2>
+        <div class="form-group">
+            <label for="studentSelect">現有學員：</label>
+            <select id="studentSelect" onchange="onStudentChange()">
+                <option value="">-- 請選擇學員 --</option>
+            </select>
+        </div>
+        <div class="form-group flex-btn">
+            <input type="text" id="newStudentName" placeholder="輸入新學員姓名">
+            <button type="button" onclick="addStudent()" style="width: auto; white-space: nowrap;">新增學員</button>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h2>2. 輸入今日數據</h2>
+            <form id="dataForm" onsubmit="saveRecord(event)">
+                <div class="form-group">
+                    <label for="recordDate">日期：</label>
+                    <input type="date" id="recordDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="weight">體重 (kg)：</label>
+                    <input type="number" id="weight" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label for="bodyFat">脂肪率 (%)：</label>
+                    <input type="number" id="bodyFat" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label for="visceralFat">內臟脂肪指數：</label>
+                    <input type="number" id="visceralFat" step="0.5" required>
+                </div>
+                <div class="form-group">
+                    <label for="bmr">新陳代謝 (kcal)：</label>
+                    <input type="number" id="bmr" required>
+                </div>
+                <div class="form-group">
+                    <label for="metabolicAge">心理/代謝年齡：</label>
+                    <input type="number" id="metabolicAge" required>
+                </div>
+                <div class="form-group">
+                    <label for="water">水分 (%)：</label>
+                    <input type="number" id="water" step="0.1" required>
+                </div>
+                <button type="submit">儲存此筆紀錄</button>
+            </form>
+        </div>
+
+        <div>
+            <div class="card">
+                <h2>3. 即時數據對比 (相比上一次)</h2>
+                <div id="comparisonContainer" class="comparison-box">
+                    <div class="comp-card neutral">請先選擇學員並確保有至少兩次紀錄</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>4. 體重與脂肪率趨勢圖</h2>
+                <div class="chart-container">
+                    <canvas id="historyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>5. 歷史數據明細</h2>
+        <div style="overflow-x: auto;">
+            <table id="historyTable">
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>體重 (kg)</th>
+                        <th>脂肪率 (%)</th>
+                        <th>內臟脂肪</th>
+                        <th>新陳代謝 (kcal)</th>
+                        <th>心理年齡</th>
+                        <th>水分 (%)</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="8">暫無數據</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 數據結構: { "學員A": [ {date, weight, bodyFat...}, ... ], "學員B": [] }
+    let systemData = JSON.parse(localStorage.getItem('coach_system_data')) || {};
+    let currentChart = null;
+
+    // 頁面初始化
+    window.onload = function() {
+        document.getElementById('recordDate').valueAsDate = new Date();
+        updateStudentDropdown();
+    };
+
+    // 更新學員下拉選單
+    function updateStudentDropdown() {
+        const select = document.getElementById('studentSelect');
+        const currentSelected = select.value;
+        select.innerHTML = '<option value="">-- 請選擇學員 --</option>';
+        
+        Object.keys(systemData).sort().forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+        });
+        
+        if(currentSelected && systemData[currentSelected]) {
+            select.value = currentSelected;
+        }
+    }
+
+    // 新增學員
+    function addStudent() {
+        const nameInput = document.getElementById('newStudentName');
+        const name = nameInput.value.trim();
+        if (!name) return alert('請輸入學員姓名！');
+        if (systemData[name]) return alert('該學員已存在！');
+        
+        systemData[name] = [];
+        localStorage.setItem('coach_system_data', JSON.stringify(systemData));
+        nameInput.value = '';
+        updateStudentDropdown();
+        document.getElementById('studentSelect').value = name;
+        onStudentChange();
+    }
+
+    // 切換學員時觸發
+    function onStudentChange() {
+        updateUI();
+    }
+
+    // 儲存新紀錄
+    function saveRecord(e) {
+        e.preventDefault();
+        const studentName = document.getElementById('studentSelect').value;
+        if (!studentName) return alert('請先選擇或新增一個學員！');
+
+        const record = {
+            date: document.getElementById('recordDate').value,
+            weight: parseFloat(document.getElementById('weight').value),
+            bodyFat: parseFloat(document.getElementById('bodyFat').value),
+            visceralFat: parseFloat(document.getElementById('visceralFat').value),
+            bmr: parseInt(document.getElementById('bmr').value),
+            metabolicAge: parseInt(document.getElementById('metabolicAge').value),
+            water: parseFloat(document.getElementById('water').value)
+        };
+
+        // 檢查該日期是否已有紀錄，有的話就覆蓋，沒有就新增
+        const existingIndex = systemData[studentName].findIndex(r => r.date === record.date);
+        if (existingIndex > -1) {
+            systemData[studentName][existingIndex] = record;
+        } else {
+            systemData[studentName].push(record);
+        }
+
+        // 按日期由舊到新排序（方便畫 Graph）
+        systemData[studentName].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        localStorage.setItem('coach_system_data', JSON.stringify(systemData));
+        document.getElementById('dataForm').reset();
+        document.getElementById('recordDate').valueAsDate = new Date();
+        
+        updateUI();
+    }
+
+    // 刪除某一筆紀錄
+    function deleteRecord(index) {
+        const studentName = document.getElementById('studentSelect').value;
+        if(confirm('確定要刪除這筆紀錄嗎？')) {
+            systemData[studentName].splice(index, 1);
+            localStorage.setItem('coach_system_data', JSON.stringify(systemData));
+            updateUI();
+        }
+    }
+
+    // 更新成個網頁嘅顯示數據
+    function updateUI() {
+        const studentName = document.getElementById('studentSelect').value;
+        const compContainer = document.getElementById('comparisonContainer');
+        const tableBody = document.querySelector('#historyTable tbody');
+        
+        if (!studentName || !systemData[studentName] || systemData[studentName].length === 0) {
+            compContainer.innerHTML = '<div class="comp-card neutral" style="grid-column: span 2;">暫無足夠數據進行對比</div>';
+            tableBody.innerHTML = '<tr><td colspan="8">暫無數據</td></tr>';
+            if(currentChart) currentChart.destroy();
+            return;
+        }
+
+        const records = systemData[studentName];
+
+        // 1. 計算即時對比 (最新一筆 vs 上一筆)
+        if (records.length >= 2) {
+            const current = records[records.length - 1];
+            const previous = records[records.length - 2];
+            
+            const wDiff = (current.weight - previous.weight).toFixed(1);
+            const fDiff = (current.bodyFat - previous.bodyFat).toFixed(1);
+            
+            let wClass = wDiff > 0 ? 'up' : (wDiff < 0 ? 'down' : 'neutral');
+            let fClass = fDiff > 0 ? 'up' : (fDiff < 0 ? 'down' : 'neutral');
+            
+            let wText = wDiff > 0 ? `體重: +${wDiff} kg 🔼` : (wDiff < 0 ? `體重: ${wDiff} kg 🔽` : `體重無變動`);
+            let fText = fDiff > 0 ? `脂肪率: +${fDiff} % 🔼` : (fDiff < 0 ? `脂肪率: ${fDiff} % 🔽` : `脂肪率無變動`);
+
+            compContainer.innerHTML = `
+                <div class="comp-card ${wClass}">${wText}</div>
+                <div class="comp-card ${fClass}">${fText}</div>
+            `;
+        } else {
+            compContainer.innerHTML = '<div class="comp-card neutral" style="grid-column: span 2;">第一次紀錄，期待下一次的進步！</div>';
+        }
+
+        // 2. 渲染表格 (最新的顯示在最上面)
+        tableBody.innerHTML = '';
+        // 複製一份用作倒序顯示
+        [...records].reverse().forEach((r, index) => {
+            const actualIndex = records.length - 1 - index; // 對應返原本 Array 嘅 index
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${r.date}</td>
+                <td>${r.weight}</td>
+                <td>${r.bodyFat}%</td>
+                <td>${r.visceralFat}</td>
+                <td>${r.bmr}</td>
+                <td>${r.metabolicAge}</td>
+                <td>${r.water}%</td>
+                <td><button onclick="deleteRecord(${actualIndex})" style="padding:2px 5px; font-size:12px; background-color:var(--danger-color);">刪除</button></td>
+            `;
+            tableBody.appendChild(tr);
+        });
+
+        // 3. 繪製圖表
+        renderChart(records);
+    }
+
+    // 使用 Chart.js 畫折線圖
+    function renderChart(records) {
+        const ctx = document.getElementById('historyChart').getContext('2d');
+        
+        if (currentChart) {
+            currentChart.destroy(); // 避免圖表重疊
+        }
+
+        const labels = records.map(r => r.date);
+        const weightData = records.map(r => r.weight);
+        const fatData = records.map(r => r.bodyFat);
+
+        currentChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '體重 (kg)',
+                        data: weightData,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        yAxisID: 'yWeight',
+                        tension: 0.1
+                    },
+                    {
+                        label: '脂肪率 (%)',
+                        data: fatData,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        yAxisID: 'yFat',
+                        tension: 0.1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    yWeight: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: { display: true, text: '體重 (kg)' }
+                    },
+                    yFat: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: { display: true, text: '脂肪率 (%)' },
+                        grid: { drawOnChartArea: false } // 避免雙網格線混亂
+                    }
+                }
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
