@@ -2,15 +2,17 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>教練數據管理系統 - 修正版</title>
+    <title>教練數據管理系統 - 生理年齡版</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary-color: #2c3e50; --accent-color: #3498db; --bg-color: #f8f9fa; }
-        body { font-family: sans-serif; background-color: var(--bg-color); padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        input, select { padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 8px 15px; cursor: pointer; background: var(--accent-color); color: white; border: none; border-radius: 4px; }
-        .info-box { background: #eef; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        body { font-family: sans-serif; background-color: #f4f7f6; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input, select { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 15px; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px; }
+        .chart-container { height: 300px; width: 100%; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background: #3498db; color: white; }
     </style>
 </head>
 <body>
@@ -20,19 +22,11 @@
 
     <div class="card">
         <h2>學員管理</h2>
-        <div>
-            <select id="studentSelect" onchange="onStudentChange()"><option value="">-- 請選擇學員 --</option></select>
-            <input type="text" id="newStudentName" placeholder="姓名">
-            <input type="number" id="newStudentAge" placeholder="年齡">
-            <input type="number" id="newStudentHeight" placeholder="身高(cm)">
-            <button onclick="addOrUpdateStudent()">新增/更新學員</button>
-        </div>
-        <div id="studentInfo" class="info-box">請選擇或新增學員以顯示資訊</div>
-        <div>
-            <button onclick="exportData('all')">匯出全部</button>
-            <button onclick="document.getElementById('fileInput').click()">匯入檔案</button>
-            <input type="file" id="fileInput" hidden onchange="importData(event)">
-        </div>
+        <select id="studentSelect" onchange="onStudentChange()"><option value="">-- 請選擇學員 --</option></select>
+        <input type="text" id="newStudentName" placeholder="姓名">
+        <input type="number" id="newStudentAge" placeholder="年齡">
+        <input type="number" id="newStudentHeight" placeholder="身高(cm)">
+        <button onclick="addOrUpdateStudent()">新增或更新學員</button>
     </div>
 
     <div class="card">
@@ -42,31 +36,46 @@
             <input type="number" id="weight" placeholder="體重(kg)" step="0.1" required>
             <input type="number" id="bodyFat" placeholder="脂肪%" step="0.1" required>
             <input type="number" id="visceralFat" placeholder="內臟脂" step="0.5" required>
-            <input type="number" id="bmr" placeholder="代謝(kcal)" required>
-            <input type="number" id="metabolicAge" placeholder="心理年齡" required>
+            <input type="number" id="bmr" placeholder="代謝" required>
+            <input type="number" id="metabolicAge" placeholder="生理年齡" required>
             <input type="number" id="water" placeholder="水分%" step="0.1" required>
             <button type="submit">儲存紀錄</button>
         </form>
+    </div>
+
+    <div class="card">
+        <h2>數據趨勢圖</h2>
+        <div id="chartStatus" style="color:red;">(請選擇學員並輸入至少兩筆數據以顯示圖表)</div>
+        <div class="chart-container"><canvas id="myChart"></canvas></div>
+    </div>
+
+    <div class="card">
+        <h2>歷史紀錄表格</h2>
+        <table id="historyTable">
+            <thead>
+                <tr>
+                    <th>日期</th><th>體重</th><th>脂肪%</th><th>內臟脂</th><th>代謝</th><th>生理年齡</th><th>水分%</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 </div>
 
 <script>
     let systemData = JSON.parse(localStorage.getItem('coach_system_data')) || { students: {}, records: {} };
+    let chartInstance = null;
 
     function addOrUpdateStudent() {
         const name = document.getElementById('newStudentName').value;
         const age = document.getElementById('newStudentAge').value;
         const height = document.getElementById('newStudentHeight').value;
-        
         if (!name || !age || !height) return alert('請填寫完整資訊');
-        
         systemData.students[name] = { age, height };
         if (!systemData.records[name]) systemData.records[name] = [];
-        
         localStorage.setItem('coach_system_data', JSON.stringify(systemData));
         updateStudentDropdown(name);
-        onStudentChange();
-        alert('學員資訊已儲存');
+        alert('學員 ' + name + ' 已儲存！');
     }
 
     function updateStudentDropdown(selectedName = "") {
@@ -79,22 +88,19 @@
 
     function onStudentChange() {
         const name = document.getElementById('studentSelect').value;
-        const infoDiv = document.getElementById('studentInfo');
         if (name && systemData.students[name]) {
             const s = systemData.students[name];
-            infoDiv.innerHTML = `當前學員：<strong>${name}</strong> | 年齡：${s.age} | 身高：${s.height}cm`;
             document.getElementById('newStudentName').value = name;
             document.getElementById('newStudentAge').value = s.age;
             document.getElementById('newStudentHeight').value = s.height;
-        } else {
-            infoDiv.innerHTML = "請選擇或新增學員以顯示資訊";
+            renderAll(name);
         }
     }
 
     function saveRecord(e) {
         e.preventDefault();
         const name = document.getElementById('studentSelect').value;
-        if (!name) return alert('請先選擇學員！');
+        if (!name) return alert('請先選擇學員');
         
         const record = {
             date: document.getElementById('recordDate').value,
@@ -102,33 +108,34 @@
             bodyFat: document.getElementById('bodyFat').value,
             visceralFat: document.getElementById('visceralFat').value,
             bmr: document.getElementById('bmr').value,
-            metabolicAge: document.getElementById('metabolicAge').value,
+            metabolicAge: document.getElementById('metabolicAge').value, // 這裡變數名稱維持，但介面已改名
             water: document.getElementById('water').value
         };
         
         systemData.records[name].push(record);
         localStorage.setItem('coach_system_data', JSON.stringify(systemData));
-        alert('紀錄成功');
+        renderAll(name);
+        alert('儲存成功！');
     }
 
-    // 匯出匯入功能 (保持不變)
-    function exportData() {
-        const blob = new Blob([JSON.stringify(systemData)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'data.json';
-        a.click();
-    }
-
-    function importData(e) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            systemData = JSON.parse(event.target.result);
-            localStorage.setItem('coach_system_data', JSON.stringify(systemData));
-            updateStudentDropdown();
-            alert('匯入成功');
-        };
-        reader.readAsText(e.target.files[0]);
+    function renderAll(name) {
+        const records = systemData.records[name];
+        const tbody = document.querySelector('#historyTable tbody');
+        tbody.innerHTML = records.map(r => `<tr><td>${r.date}</td><td>${r.weight}</td><td>${r.bodyFat}</td><td>${r.visceralFat}</td><td>${r.bmr}</td><td>${r.metabolicAge}</td><td>${r.water}</td></tr>`).join('');
+        
+        // 畫圖邏輯
+        const ctx = document.getElementById('myChart').getContext('2d');
+        if (chartInstance) chartInstance.destroy();
+        if (records.length >= 2) {
+            document.getElementById('chartStatus').innerHTML = "";
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: records.map(r => r.date),
+                    datasets: [{ label: '體重 (kg)', data: records.map(r => r.weight), borderColor: '#3498db' }]
+                }
+            });
+        }
     }
 
     window.onload = () => {
