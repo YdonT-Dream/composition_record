@@ -2,14 +2,14 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>專業版教練數據系統 - 體型記錄版</title>
+    <title>專業版教練數據系統 - 最終整合版</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; padding: 20px; }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .grid-inputs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 90%; }
+        input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 90%; }
         button { padding: 10px 15px; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px; margin-top: 5px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
         th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }
@@ -37,18 +37,13 @@
         <hr>
         <form onsubmit="saveRecord(event)" class="grid-inputs">
             <input type="date" id="date" required>
-            <select id="bodyType">
-                <option value="標準型">標準型</option>
-                <option value="瘦小型">瘦小型</option>
-                <option value="肥胖型">肥胖型</option>
-                <option value="運動型">運動型</option>
-            </select>
             <input type="number" id="weight" placeholder="體重(kg)" step="0.1" required>
             <input type="number" id="fat" placeholder="總脂肪%" step="0.1" required>
             <input type="number" id="muscle" placeholder="總肌肉(kg)" step="0.1" required>
             <input type="number" id="water" placeholder="水分%" step="0.1" required>
             <input type="number" id="vFat" placeholder="內臟脂肪" step="0.5">
             <input type="number" id="mAge" placeholder="生理年齡">
+            <input type="number" id="bodyType" placeholder="體型種類(數字)">
             <input type="number" id="lFat" placeholder="左手脂%"> <input type="number" id="rFat" placeholder="右手脂%">
             <input type="number" id="tFat" placeholder="軀幹脂%"> <input type="number" id="llFat" placeholder="左腳脂%">
             <input type="number" id="rlFat" placeholder="右腳脂%"> <input type="number" id="lMus" placeholder="左手肌kg">
@@ -111,24 +106,15 @@
         const name = document.getElementById('studentSelect').value;
         if(!name) return alert('請先選擇學員');
         const rec = { 
-            date: document.getElementById('date').value, 
-            bodyType: document.getElementById('bodyType').value,
-            weight: document.getElementById('weight').value, 
-            fat: document.getElementById('fat').value, 
-            muscle: document.getElementById('muscle').value, 
-            water: document.getElementById('water').value, 
-            vFat: document.getElementById('vFat').value, 
-            mAge: document.getElementById('mAge').value, 
-            lFat: document.getElementById('lFat').value, 
-            rFat: document.getElementById('rFat').value, 
-            tFat: document.getElementById('tFat').value, 
-            llFat: document.getElementById('llFat').value, 
-            rlFat: document.getElementById('rlFat').value, 
-            lMus: document.getElementById('lMus').value, 
-            rMus: document.getElementById('rMus').value, 
-            tMus: document.getElementById('tMus').value, 
-            llMus: document.getElementById('llMus').value, 
-            rlMus: document.getElementById('rlMus').value 
+            date: document.getElementById('date').value, bodyType: document.getElementById('bodyType').value,
+            weight: document.getElementById('weight').value, fat: document.getElementById('fat').value, 
+            muscle: document.getElementById('muscle').value, water: document.getElementById('water').value, 
+            vFat: document.getElementById('vFat').value, mAge: document.getElementById('mAge').value, 
+            lFat: document.getElementById('lFat').value, rFat: document.getElementById('rFat').value, 
+            tFat: document.getElementById('tFat').value, llFat: document.getElementById('llFat').value, 
+            rlFat: document.getElementById('rlFat').value, lMus: document.getElementById('lMus').value, 
+            rMus: document.getElementById('rMus').value, tMus: document.getElementById('tMus').value, 
+            llMus: document.getElementById('llMus').value, rlMus: document.getElementById('rlMus').value 
         };
         systemData.records[name].push(rec);
         localStorage.setItem('coach_data', JSON.stringify(systemData));
