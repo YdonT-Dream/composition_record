@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>專業版教練數據系統</title>
+    <title>專業版教練數據系統 - 體型記錄版</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -32,12 +32,17 @@
         <input type="text" id="name" placeholder="姓名">
         <input type="number" id="age" placeholder="年紀">
         <input type="number" id="height" placeholder="身高">
-        <input type="text" id="bodyType" placeholder="體型種類">
-        <button onclick="saveStudent()">儲存學員</button>
+        <button onclick="saveStudent()">儲存學員基本資料</button>
         <button style="background:#e74c3c;" onclick="generatePDF()">匯出 PDF 報告</button>
         <hr>
         <form onsubmit="saveRecord(event)" class="grid-inputs">
             <input type="date" id="date" required>
+            <select id="bodyType">
+                <option value="標準型">標準型</option>
+                <option value="瘦小型">瘦小型</option>
+                <option value="肥胖型">肥胖型</option>
+                <option value="運動型">運動型</option>
+            </select>
             <input type="number" id="weight" placeholder="體重(kg)" step="0.1" required>
             <input type="number" id="fat" placeholder="總脂肪%" step="0.1" required>
             <input type="number" id="muscle" placeholder="總肌肉(kg)" step="0.1" required>
@@ -54,7 +59,7 @@
     </div>
 
     <div class="card">
-        <h3>趨勢圖</h3>
+        <h3>數據趨勢圖</h3>
         <canvas id="myChart" height="100"></canvas>
     </div>
 
@@ -62,7 +67,7 @@
         <h3>歷史紀錄數據</h3>
         <div style="overflow-x:auto;">
             <table id="historyTable">
-                <thead><tr><th>日期</th><th>體重</th><th>脂%</th><th>肌kg</th><th>水%</th><th>內臟</th><th>生理年齡</th><th>左手脂</th><th>右手脂</th><th>軀幹脂</th><th>左腳脂</th><th>右腳脂</th><th>左手肌</th><th>右手肌</th><th>軀幹肌</th><th>左腳肌</th><th>右腳肌</th></tr></thead>
+                <thead><tr><th>日期</th><th>體型</th><th>體重</th><th>脂%</th><th>肌kg</th><th>水%</th><th>內臟</th><th>生理</th><th>左手脂</th><th>右手脂</th><th>軀幹脂</th><th>左腳脂</th><th>右腳脂</th><th>左手肌</th><th>右手肌</th><th>軀幹肌</th><th>左腳肌</th><th>右腳肌</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -76,7 +81,7 @@
     function saveStudent() {
         const name = document.getElementById('name').value.trim();
         if(!name) return alert('請輸入姓名');
-        systemData.students[name] = { age: document.getElementById('age').value, height: document.getElementById('height').value, type: document.getElementById('bodyType').value };
+        systemData.students[name] = { age: document.getElementById('age').value, height: document.getElementById('height').value };
         if (!systemData.records[name]) systemData.records[name] = [];
         localStorage.setItem('coach_data', JSON.stringify(systemData));
         updateSelect();
@@ -96,9 +101,8 @@
         document.getElementById('name').value = name;
         document.getElementById('age').value = s.age;
         document.getElementById('height').value = s.height;
-        document.getElementById('bodyType').value = s.type;
         document.getElementById('pdfName').innerText = "學員: " + name;
-        document.getElementById('pdfInfo').innerText = `年紀: ${s.age}歲 | 身高: ${s.height}cm | 體型: ${s.type}`;
+        document.getElementById('pdfInfo').innerText = `年紀: ${s.age}歲 | 身高: ${s.height}cm`;
         render(name);
     }
 
@@ -106,7 +110,26 @@
         e.preventDefault();
         const name = document.getElementById('studentSelect').value;
         if(!name) return alert('請先選擇學員');
-        const rec = { date: document.getElementById('date').value, weight: document.getElementById('weight').value, fat: document.getElementById('fat').value, muscle: document.getElementById('muscle').value, water: document.getElementById('water').value, vFat: document.getElementById('vFat').value, mAge: document.getElementById('mAge').value, lFat: document.getElementById('lFat').value, rFat: document.getElementById('rFat').value, tFat: document.getElementById('tFat').value, llFat: document.getElementById('llFat').value, rlFat: document.getElementById('rlFat').value, lMus: document.getElementById('lMus').value, rMus: document.getElementById('rMus').value, tMus: document.getElementById('tMus').value, llMus: document.getElementById('llMus').value, rlMus: document.getElementById('rlMus').value };
+        const rec = { 
+            date: document.getElementById('date').value, 
+            bodyType: document.getElementById('bodyType').value,
+            weight: document.getElementById('weight').value, 
+            fat: document.getElementById('fat').value, 
+            muscle: document.getElementById('muscle').value, 
+            water: document.getElementById('water').value, 
+            vFat: document.getElementById('vFat').value, 
+            mAge: document.getElementById('mAge').value, 
+            lFat: document.getElementById('lFat').value, 
+            rFat: document.getElementById('rFat').value, 
+            tFat: document.getElementById('tFat').value, 
+            llFat: document.getElementById('llFat').value, 
+            rlFat: document.getElementById('rlFat').value, 
+            lMus: document.getElementById('lMus').value, 
+            rMus: document.getElementById('rMus').value, 
+            tMus: document.getElementById('tMus').value, 
+            llMus: document.getElementById('llMus').value, 
+            rlMus: document.getElementById('rlMus').value 
+        };
         systemData.records[name].push(rec);
         localStorage.setItem('coach_data', JSON.stringify(systemData));
         render(name);
@@ -116,7 +139,7 @@
     function render(name) {
         const recs = systemData.records[name];
         const tbody = document.querySelector('#historyTable tbody');
-        tbody.innerHTML = recs.map(r => `<tr><td>${r.date}</td><td>${r.weight}</td><td>${r.fat}</td><td>${r.muscle}</td><td>${r.water}</td><td>${r.vFat}</td><td>${r.mAge}</td><td>${r.lFat}</td><td>${r.rFat}</td><td>${r.tFat}</td><td>${r.llFat}</td><td>${r.rlFat}</td><td>${r.lMus}</td><td>${r.rMus}</td><td>${r.tMus}</td><td>${r.llMus}</td><td>${r.rlMus}</td></tr>`).join('');
+        tbody.innerHTML = recs.map(r => `<tr><td>${r.date}</td><td>${r.bodyType}</td><td>${r.weight}</td><td>${r.fat}</td><td>${r.muscle}</td><td>${r.water}</td><td>${r.vFat}</td><td>${r.mAge}</td><td>${r.lFat}</td><td>${r.rFat}</td><td>${r.tFat}</td><td>${r.llFat}</td><td>${r.rlFat}</td><td>${r.lMus}</td><td>${r.rMus}</td><td>${r.tMus}</td><td>${r.llMus}</td><td>${r.rlMus}</td></tr>`).join('');
         
         const ctx = document.getElementById('myChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
