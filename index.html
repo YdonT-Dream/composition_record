@@ -2,35 +2,44 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>專業教練數據系統</title>
+    <title>教練數據整合系統</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; padding: 20px; }
         .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; }
-        .grid-inputs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-        input { padding: 5px; border: 1px solid #ccc; border-radius: 4px; width: 90%; font-size: 12px; }
-        button { padding: 8px 12px; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px; }
-        /* 強制 PDF 表格縮小 */
-        table { width: 100%; border-collapse: collapse; font-size: 8px; table-layout: fixed; }
-        th, td { border: 1px solid #000; padding: 2px; text-align: center; word-wrap: break-word; }
-        th { background: #eee; }
+        .grid-inputs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+        input, select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; width: 90%; font-size: 12px; }
+        button { padding: 8px; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; font-size: 9px; margin-top: 10px; }
+        th, td { border: 1px solid #000; padding: 2px; text-align: center; }
+        #logoImg { max-width: 100px; display: none; }
     </style>
 </head>
 <body>
 
-<div id="reportArea" style="max-width: 800px; margin: auto;">
-    <h2 id="pdfName">學員報告</h2>
-    <div id="studentHeader"><p id="pdfInfo"></p></div>
+<div id="reportArea" style="max-width: 900px; margin: auto;">
+    <img id="logoImg" src="">
+    <h2 id="reportTitle">學員報告</h2>
+    <div id="studentHeader"><p id="studentInfo"></p></div>
 
     <div class="card" id="no-print">
-        <h3>管理與輸入</h3>
+        <h3>管理與設定</h3>
+        <input type="file" id="logoUpload" accept="image/*" onchange="uploadLogo(event)">
+        <button onclick="exportJSON()">匯出備份</button>
+        <button onclick="document.getElementById('importFile').click()">匯入備份</button>
+        <input type="file" id="importFile" hidden onchange="importJSON(event)">
+        <hr>
         <select id="studentSelect" onchange="onStudentChange()"><option value="">-- 選擇學員 --</option></select>
         <input type="text" id="name" placeholder="姓名">
         <input type="number" id="age" placeholder="年紀">
+        <input type="number" id="height" placeholder="身高">
         <button onclick="saveStudent()">儲存學員</button>
-        <button onclick="generatePDF()" style="background:#e74c3c;">匯出 PDF</button>
-        <hr>
+        <button style="background:#e74c3c;" onclick="generatePDF()">匯出 PDF</button>
+    </div>
+
+    <div class="card" id="no-print">
+        <h3>輸入數據</h3>
         <form onsubmit="saveRecord(event)" class="grid-inputs">
             <input type="date" id="date" required>
             <input type="number" id="weight" placeholder="體重" step="0.1">
@@ -45,7 +54,7 @@
             <input type="number" id="rlFat" placeholder="右腳脂"> <input type="number" id="lMus" placeholder="左手肌">
             <input type="number" id="rMus" placeholder="右手肌"> <input type="number" id="tMus" placeholder="軀肌">
             <input type="number" id="llMus" placeholder="左腳肌"> <input type="number" id="rlMus" placeholder="右腳肌">
-            <button type="submit" style="grid-column: span 3; background: #27ae60;">儲存紀錄</button>
+            <button type="submit" style="grid-column: span 4; background: #27ae60;">儲存紀錄</button>
         </form>
     </div>
 
@@ -57,27 +66,40 @@
     <div class="card">
         <h3>歷史數據</h3>
         <table id="historyTable">
-            <thead><tr><th>日期</th><th>體型</th><th>體重</th><th>脂%</th><th>肌kg</th><th>水%</th><th>內臟</th><th>生理</th><th>左手脂</th><th>右手脂</th><th>軀脂</th><th>左腳脂</th><th>右腳脂</th><th>左手肌</th><th>右手肌</th><th>軀肌</th><th>左腳肌</th><th>右腳肌</th></tr></thead>
+            <thead><tr><th>日期</th><th>體型</th><th>體重</th><th>脂%</th><th>肌kg</th><th>水%</th><th>內臟</th><th>生理</th><th>左脂</th><th>右脂</th><th>軀脂</th><th>左腳脂</th><th>右腳脂</th><th>左肌</th><th>右肌</th><th>軀肌</th><th>左腳肌</th><th>右腳肌</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>
 </div>
 
 <script>
-    // 關鍵修復：如果資料損壞，自動重設
-    let systemData = JSON.parse(localStorage.getItem('coach_data'));
-    if (!systemData || !systemData.students) {
-        systemData = { students: {}, records: {} };
+    let systemData = JSON.parse(localStorage.getItem('coach_data')) || { students: {}, records: {} };
+    let chartInstance = null;
+
+    function uploadLogo(e) {
+        const reader = new FileReader();
+        reader.onload = e => { document.getElementById('logoImg').src = e.target.result; document.getElementById('logoImg').style.display = 'block'; };
+        reader.readAsDataURL(e.target.files[0]);
+    }
+
+    function exportJSON() {
+        const a = document.createElement('a');
+        a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(systemData));
+        a.download = "backup.json"; a.click();
+    }
+
+    function importJSON(e) {
+        const reader = new FileReader();
+        reader.onload = e => { systemData = JSON.parse(e.target.result); localStorage.setItem('coach_data', JSON.stringify(systemData)); updateSelect(); render(); };
+        reader.readAsText(e.target.files[0]);
     }
 
     function saveStudent() {
         const name = document.getElementById('name').value.trim();
-        if(!name) return alert('請輸入姓名');
-        systemData.students[name] = { age: document.getElementById('age').value };
+        systemData.students[name] = { age: document.getElementById('age').value, height: document.getElementById('height').value };
         if (!systemData.records[name]) systemData.records[name] = [];
         localStorage.setItem('coach_data', JSON.stringify(systemData));
         updateSelect();
-        alert('已儲存');
     }
 
     function updateSelect() {
@@ -90,23 +112,21 @@
         const name = document.getElementById('studentSelect').value;
         if (!name) return;
         document.getElementById('name').value = name;
-        document.getElementById('pdfName').innerText = "學員: " + name;
+        document.getElementById('studentInfo').innerText = `年紀: ${systemData.students[name].age} | 身高: ${systemData.students[name].height}`;
         render(name);
     }
 
     function saveRecord(e) {
         e.preventDefault();
         const name = document.getElementById('studentSelect').value;
-        if(!name) return alert('請先選擇學員');
         const fields = ['date','bodyType','weight','fat','muscle','water','vFat','mAge','lFat','rFat','tFat','llFat','rlFat','lMus','rMus','tMus','llMus','rlMus'];
-        let rec = {};
-        fields.forEach(f => rec[f] = document.getElementById(f).value);
+        let rec = {}; fields.forEach(f => rec[f] = document.getElementById(f).value);
         systemData.records[name].push(rec);
         localStorage.setItem('coach_data', JSON.stringify(systemData));
         render(name);
     }
 
-    function render(name) {
+    function render(name = document.getElementById('studentSelect').value) {
         const recs = systemData.records[name] || [];
         const tbody = document.querySelector('#historyTable tbody');
         tbody.innerHTML = recs.map(r => `<tr><td>${r.date}</td><td>${r.bodyType}</td><td>${r.weight}</td><td>${r.fat}</td><td>${r.muscle}</td><td>${r.water}</td><td>${r.vFat}</td><td>${r.mAge}</td><td>${r.lFat}</td><td>${r.rFat}</td><td>${r.tFat}</td><td>${r.llFat}</td><td>${r.rlFat}</td><td>${r.lMus}</td><td>${r.rMus}</td><td>${r.tMus}</td><td>${r.llMus}</td><td>${r.rlMus}</td></tr>`).join('');
