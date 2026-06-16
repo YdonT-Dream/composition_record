@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>學員身體數據報告系統</title>
+    <title>專業版教練數據系統</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -14,13 +14,12 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
         th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }
         th { background: #3498db; color: white; }
-        #no-print { background: #fdfdfd; border: 1px dashed #ccc; }
     </style>
 </head>
 <body>
 
 <div id="reportArea" style="max-width: 900px; margin: auto;">
-    <h1 id="mainTitle">學員身體數據報告</h1>
+    <h1>學員身體數據報告</h1>
 
     <div class="card" id="studentHeader">
         <h2 id="pdfName">請選擇學員</h2>
@@ -44,6 +43,7 @@
             <input type="number" id="muscle" placeholder="總肌肉(kg)" step="0.1" required>
             <input type="number" id="water" placeholder="水分%" step="0.1" required>
             <input type="number" id="vFat" placeholder="內臟脂肪" step="0.5">
+            <input type="number" id="mAge" placeholder="生理年齡">
             <input type="number" id="lFat" placeholder="左手脂%"> <input type="number" id="rFat" placeholder="右手脂%">
             <input type="number" id="tFat" placeholder="軀幹脂%"> <input type="number" id="llFat" placeholder="左腳脂%">
             <input type="number" id="rlFat" placeholder="右腳脂%"> <input type="number" id="lMus" placeholder="左手肌kg">
@@ -62,7 +62,7 @@
         <h3>歷史紀錄數據</h3>
         <div style="overflow-x:auto;">
             <table id="historyTable">
-                <thead><tr><th>日期</th><th>體重</th><th>脂%</th><th>肌kg</th><th>水分%</th><th>內臟脂</th><th>左手脂</th><th>右手脂</th><th>軀幹脂</th><th>左腳脂</th><th>右腳脂</th><th>左手肌</th><th>右手肌</th><th>軀幹肌</th><th>左腳肌</th><th>右腳肌</th></tr></thead>
+                <thead><tr><th>日期</th><th>體重</th><th>脂%</th><th>肌kg</th><th>水%</th><th>內臟</th><th>生理年齡</th><th>左手脂</th><th>右手脂</th><th>軀幹脂</th><th>左腳脂</th><th>右腳脂</th><th>左手肌</th><th>右手肌</th><th>軀幹肌</th><th>左腳肌</th><th>右腳肌</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -75,6 +75,7 @@
 
     function saveStudent() {
         const name = document.getElementById('name').value.trim();
+        if(!name) return alert('請輸入姓名');
         systemData.students[name] = { age: document.getElementById('age').value, height: document.getElementById('height').value, type: document.getElementById('bodyType').value };
         if (!systemData.records[name]) systemData.records[name] = [];
         localStorage.setItem('coach_data', JSON.stringify(systemData));
@@ -104,16 +105,18 @@
     function saveRecord(e) {
         e.preventDefault();
         const name = document.getElementById('studentSelect').value;
-        const rec = { date: document.getElementById('date').value, weight: document.getElementById('weight').value, fat: document.getElementById('fat').value, muscle: document.getElementById('muscle').value, water: document.getElementById('water').value, vFat: document.getElementById('vFat').value, lFat: document.getElementById('lFat').value, rFat: document.getElementById('rFat').value, tFat: document.getElementById('tFat').value, llFat: document.getElementById('llFat').value, rlFat: document.getElementById('rlFat').value, lMus: document.getElementById('lMus').value, rMus: document.getElementById('rMus').value, tMus: document.getElementById('tMus').value, llMus: document.getElementById('llMus').value, rlMus: document.getElementById('rlMus').value };
+        if(!name) return alert('請先選擇學員');
+        const rec = { date: document.getElementById('date').value, weight: document.getElementById('weight').value, fat: document.getElementById('fat').value, muscle: document.getElementById('muscle').value, water: document.getElementById('water').value, vFat: document.getElementById('vFat').value, mAge: document.getElementById('mAge').value, lFat: document.getElementById('lFat').value, rFat: document.getElementById('rFat').value, tFat: document.getElementById('tFat').value, llFat: document.getElementById('llFat').value, rlFat: document.getElementById('rlFat').value, lMus: document.getElementById('lMus').value, rMus: document.getElementById('rMus').value, tMus: document.getElementById('tMus').value, llMus: document.getElementById('llMus').value, rlMus: document.getElementById('rlMus').value };
         systemData.records[name].push(rec);
         localStorage.setItem('coach_data', JSON.stringify(systemData));
         render(name);
+        alert('紀錄儲存成功');
     }
 
     function render(name) {
         const recs = systemData.records[name];
         const tbody = document.querySelector('#historyTable tbody');
-        tbody.innerHTML = recs.map(r => `<tr><td>${r.date}</td><td>${r.weight}</td><td>${r.fat}</td><td>${r.muscle}</td><td>${r.water}</td><td>${r.vFat}</td><td>${r.lFat}</td><td>${r.rFat}</td><td>${r.tFat}</td><td>${r.llFat}</td><td>${r.rlFat}</td><td>${r.lMus}</td><td>${r.rMus}</td><td>${r.tMus}</td><td>${r.llMus}</td><td>${r.rlMus}</td></tr>`).join('');
+        tbody.innerHTML = recs.map(r => `<tr><td>${r.date}</td><td>${r.weight}</td><td>${r.fat}</td><td>${r.muscle}</td><td>${r.water}</td><td>${r.vFat}</td><td>${r.mAge}</td><td>${r.lFat}</td><td>${r.rFat}</td><td>${r.tFat}</td><td>${r.llFat}</td><td>${r.rlFat}</td><td>${r.lMus}</td><td>${r.rMus}</td><td>${r.tMus}</td><td>${r.llMus}</td><td>${r.rlMus}</td></tr>`).join('');
         
         const ctx = document.getElementById('myChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
@@ -121,31 +124,15 @@
     }
 
     function generatePDF() {
-        const studentName = document.getElementById('studentSelect').value;
-        if (!studentName) return alert('請先選擇一位學員以匯出報告');
-
-        // 獲取當前時間並格式化
+        const name = document.getElementById('studentSelect').value || "報告";
         const now = new Date();
-        const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
-        const timeStr = now.getHours() + '-' + now.getMinutes(); // HH-MM
-        const fileName = `${studentName}_${dateStr}_${timeStr}.pdf`;
-
+        const fileName = `${name}_${now.toISOString().split('T')[0]}_${now.getHours()}-${now.getMinutes()}.pdf`;
         const el = document.getElementById('no-print');
-        el.style.display = 'none'; // 匯出時隱藏輸入區
-        
-        html2pdf()
-            .set({
-                filename: fileName,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            })
-            .from(document.getElementById('reportArea'))
-            .save()
-            .then(() => {
-                el.style.display = 'block'; // 匯出後恢復顯示
-            });
+        el.style.display = 'none';
+        html2pdf().from(document.getElementById('reportArea')).set({filename: fileName}).save().then(() => el.style.display = 'block');
     }
+
+    window.onload = () => { document.getElementById('date').valueAsDate = new Date(); updateSelect(); };
 </script>
 </body>
 </html>
