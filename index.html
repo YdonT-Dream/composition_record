@@ -2,24 +2,26 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>專業版教練數據系統 - 最終整合版</title>
+    <title>專業版教練數據系統 - 最終整合</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; padding: 20px; }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .grid-inputs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 90%; }
+        input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 90%; }
         button { padding: 10px 15px; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px; margin-top: 5px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
         th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }
         th { background: #3498db; color: white; }
+        #logoPreview { max-width: 150px; display: block; margin: 10px 0; }
     </style>
 </head>
 <body>
 
 <div id="reportArea" style="max-width: 900px; margin: auto;">
-    <h1>學員身體數據報告</h1>
+    <img id="logoPreview" src="" style="display:none;">
+    <h1 id="mainTitle">學員身體數據報告</h1>
 
     <div class="card" id="studentHeader">
         <h2 id="pdfName">請選擇學員</h2>
@@ -27,7 +29,12 @@
     </div>
 
     <div class="card" id="no-print">
-        <h3>學員管理與輸入</h3>
+        <h3>系統設定與數據管理</h3>
+        <input type="file" id="logoInput" accept="image/*" onchange="loadLogo(event)">
+        <button onclick="exportJSON()">匯出所有備份(JSON)</button>
+        <button onclick="document.getElementById('importFile').click()">匯入數據(JSON)</button>
+        <input type="file" id="importFile" hidden onchange="importJSON(event)">
+        <hr>
         <select id="studentSelect" onchange="onStudentChange()"><option value="">-- 選擇學員 --</option></select>
         <input type="text" id="name" placeholder="姓名">
         <input type="number" id="age" placeholder="年紀">
@@ -37,13 +44,13 @@
         <hr>
         <form onsubmit="saveRecord(event)" class="grid-inputs">
             <input type="date" id="date" required>
-            <input type="number" id="weight" placeholder="體重(kg)" step="0.1" required>
-            <input type="number" id="fat" placeholder="總脂肪%" step="0.1" required>
-            <input type="number" id="muscle" placeholder="總肌肉(kg)" step="0.1" required>
-            <input type="number" id="water" placeholder="水分%" step="0.1" required>
+            <input type="number" id="weight" placeholder="體重(kg)" step="0.1">
+            <input type="number" id="fat" placeholder="總脂肪%" step="0.1">
+            <input type="number" id="muscle" placeholder="總肌肉(kg)" step="0.1">
+            <input type="number" id="water" placeholder="水分%" step="0.1">
             <input type="number" id="vFat" placeholder="內臟脂肪" step="0.5">
             <input type="number" id="mAge" placeholder="生理年齡">
-            <input type="number" id="bodyType" placeholder="體型種類(數字)">
+            <input type="number" id="bodyType" placeholder="體型代碼">
             <input type="number" id="lFat" placeholder="左手脂%"> <input type="number" id="rFat" placeholder="右手脂%">
             <input type="number" id="tFat" placeholder="軀幹脂%"> <input type="number" id="llFat" placeholder="左腳脂%">
             <input type="number" id="rlFat" placeholder="右腳脂%"> <input type="number" id="lMus" placeholder="左手肌kg">
@@ -72,6 +79,37 @@
 <script>
     let systemData = JSON.parse(localStorage.getItem('coach_data')) || { students: {}, records: {} };
     let chartInstance = null;
+
+    function loadLogo(e) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = document.getElementById('logoPreview');
+            img.src = event.target.result;
+            img.style.display = 'block';
+        };
+        reader.readAsDataURL(e.target.files[0]);
+    }
+
+    function exportJSON() {
+        const dataStr = JSON.stringify(systemData);
+        const blob = new Blob([dataStr], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "backup.json";
+        a.click();
+    }
+
+    function importJSON(e) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            systemData = JSON.parse(event.target.result);
+            localStorage.setItem('coach_data', JSON.stringify(systemData));
+            updateSelect();
+            alert('數據匯入成功');
+        };
+        reader.readAsText(e.target.files[0]);
+    }
 
     function saveStudent() {
         const name = document.getElementById('name').value.trim();
@@ -133,12 +171,9 @@
     }
 
     function generatePDF() {
-        const name = document.getElementById('studentSelect').value || "報告";
-        const now = new Date();
-        const fileName = `${name}_${now.toISOString().split('T')[0]}_${now.getHours()}-${now.getMinutes()}.pdf`;
         const el = document.getElementById('no-print');
         el.style.display = 'none';
-        html2pdf().from(document.getElementById('reportArea')).set({filename: fileName}).save().then(() => el.style.display = 'block');
+        html2pdf().from(document.getElementById('reportArea')).save('學員報告.pdf').then(() => el.style.display = 'block');
     }
 
     window.onload = () => { document.getElementById('date').valueAsDate = new Date(); updateSelect(); };
