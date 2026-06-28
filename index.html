@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>專業學員身體組成管理系統</title>
+    <title>專業學員身體組成管理系統 (除錯版)</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* 列印樣式隔離：列印時隱藏表單與按鈕 */
         @media print {
             body * {
                 visibility: hidden;
@@ -32,7 +31,7 @@
     <header class="bg-indigo-900 text-white shadow-md no-print">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <h1 class="text-xl font-bold flex items-center gap-2">
-                <i class="fa-solid fa-dumbbell"></i> 身體組成數據管理系統
+                <i class="fa-solid fa-dumbbell"></i> 身體組成數據管理系統 (除錯版)
             </h1>
             <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center gap-2 transition">
                 <i class="fa-solid fa-file-pdf"></i> 一鍵匯出橫向 A4 報告
@@ -114,7 +113,7 @@
                                 <input type="number" id="f-visceral" step="1" min="1" max="50" placeholder="例如: 6" class="w-full border p-2 rounded-lg mt-1">
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-600">身體類型 (Body Type) - 1~7 類別</label>
+                                <label class="block text-xs text-gray-600">身體類型 (1~7 類別)</label>
                                 <select id="f-bodytype" class="w-full border p-2 rounded-lg mt-1 bg-white">
                                     <option value="">-- 請選擇數字類別 --</option>
                                     <option value="1">1 - 隱性肥胖 (瘦胖子)</option>
@@ -209,9 +208,12 @@
     </main>
 
     <script>
+        console.log("【網頁載入】JS 腳本開始執行...");
+        
         // 初始化 LocalStorage 資料
         let students = JSON.parse(localStorage.getItem('students')) || [];
         let records = JSON.parse(localStorage.getItem('records')) || [];
+        console.log("目前 LocalStorage 學員數:", students.length);
 
         // DOM 元素
         const studentSelect = document.getElementById('student-select');
@@ -230,6 +232,7 @@
                 option.textContent = `${student.name} (身高: ${student.height}cm)`;
                 studentSelect.appendChild(option);
             });
+            console.log("下拉選單已重繪完畢。");
         }
 
         // 初始化執行
@@ -239,6 +242,7 @@
         // 1. 新增學員邏輯 + 回調檢查與反饋
         addStudentForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log("【新增學員按鈕】被觸發！");
             
             const name = document.getElementById('new-name').value.trim();
             const age = document.getElementById('new-age').value;
@@ -255,12 +259,14 @@
                 // 寫入陣列與 LocalStorage
                 students.push(newStudent);
                 localStorage.setItem('students', JSON.stringify(students));
+                console.log("資料已寫入 LocalStorage:", newStudent);
 
                 // 回調檢查：確認該 ID 是否真的存在於 Storage 內
                 const verifyStorage = JSON.parse(localStorage.getItem('students')) || [];
                 const isSaved = verifyStorage.some(s => s.id === newStudent.id);
 
                 if (isSaved) {
+                    console.log("【回調成功】學員確實存在 LocalStorage 中");
                     alert(`【系統回調確認】\n學員「${name}」已成功登記！`);
                     addStudentForm.reset();
                     updateStudentSelect();
@@ -272,14 +278,15 @@
                     throw new Error('寫入至 LocalStorage 後找不到該筆資料。');
                 }
             } catch (err) {
+                console.error("【新增學員發生例外錯誤】", err);
                 alert(`【錯誤】新學員登記失敗：${err.message}`);
-                console.error('Add student error:', err);
             }
         });
 
         // 2. 聯動載入學員資料與歷史紀錄
         studentSelect.addEventListener('change', function() {
             const selectedId = this.value;
+            console.log("下拉選單變更，選中的學員 ID:", selectedId);
             
             if (!selectedId) {
                 studentCard.classList.add('hidden');
@@ -296,7 +303,7 @@
                 studentCard.classList.remove('hidden');
             }
 
-            // 過濾並渲染該學員的歷史數據 (對應 18 欄)
+            // 過濾並渲染該學員的歷史數據
             const studentRecords = records.filter(r => r.studentId === selectedId);
             historyTableBody.innerHTML = '';
 
@@ -335,6 +342,7 @@
         // 3. 儲存多維度數據邏輯
         recordForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log("【儲存數據按鈕】被觸發！");
             
             const selectedStudentId = studentSelect.value;
             if (!selectedStudentId) {
@@ -342,7 +350,6 @@
                 return;
             }
 
-            // 收集擴充後的數據
             const newRecord = {
                 studentId: selectedStudentId,
                 date: recordDate.value,
@@ -357,7 +364,7 @@
                 m_la: document.getElementById('f-m-la').value,
                 m_trunk: document.getElementById('f-m-trunk').value,
                 m_rl: document.getElementById('f-m-rl').value,
-                m_ll: document.getElementById('f-m-ll').value,
+                m_ll: document.getElementById('f-m-ll'].value,
                 f_ra: document.getElementById('f-f-ra').value,
                 f_la: document.getElementById('f-f-la').value,
                 f_trunk: document.getElementById('f-f-trunk').value,
@@ -367,13 +374,13 @@
 
             records.push(newRecord);
             localStorage.setItem('records', JSON.stringify(records));
+            console.log("歷史數據儲存完畢:", newRecord);
 
             alert('學員身體組成資料儲存成功！表單已為您自動清空。');
             this.reset();
             recordDate.value = new Date().toISOString().substring(0, 10);
             document.getElementById('f-bodytype').value = "";
 
-            // 重新整理歷史表格
             studentSelect.dispatchEvent(new Event('change'));
         });
     </script>
