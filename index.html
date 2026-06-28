@@ -183,4 +183,198 @@
                                 <th scope="col" class="px-4 py-3 border-r">身體類型</th>
                                 <th scope="col" class="px-4 py-3 border-r">基礎代謝</th>
                                 <th scope="col" class="px-4 py-3 border-r">右手肌</th>
-                                <th scope="col" class="px-4 py-3 border-r">左手肌
+                                <th scope="col" class="px-4 py-3 border-r">左手肌</th>
+                                <th scope="col" class="px-4 py-3 border-r">軀幹肌</th>
+                                <th scope="col" class="px-4 py-3 border-r">右腿肌</th>
+                                <th scope="col" class="px-4 py-3 border-r">左腿肌</th>
+                                <th scope="col" class="px-4 py-3 border-r">右手脂</th>
+                                <th scope="col" class="px-4 py-3 border-r">左手脂</th>
+                                <th scope="col" class="px-4 py-3 border-r">軀幹脂</th>
+                                <th scope="col" class="px-4 py-3 border-r">右腿脂</th>
+                                <th scope="col" class="px-4 py-3 border-r">左腿脂</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body">
+                            <tr class="border-b text-gray-400 text-center">
+                                <td colspan="18" class="py-6">尚未選擇學員或無歷史數據</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <script>
+        // 初始化 LocalStorage 資料
+        let students = JSON.parse(localStorage.getItem('students')) || [];
+        let records = JSON.parse(localStorage.getItem('records')) || [];
+
+        // DOM 元素
+        const studentSelect = document.getElementById('student-select');
+        const studentCard = document.getElementById('student-card');
+        const addStudentForm = document.getElementById('add-student-form');
+        const recordForm = document.getElementById('record-form');
+        const recordDate = document.getElementById('record-date');
+        const historyTableBody = document.getElementById('history-table-body');
+
+        // 載入學員下拉選單選項
+        function updateStudentSelect() {
+            studentSelect.innerHTML = '<option value="">-- 請選擇或搜尋學員 --</option>';
+            students.forEach(student => {
+                const option = document.createElement('option');
+                option.value = student.id;
+                option.textContent = `${student.name} (身高: ${student.height}cm)`;
+                studentSelect.appendChild(option);
+            });
+        }
+
+        // 初始化執行
+        recordDate.value = new Date().toISOString().substring(0, 10);
+        updateStudentSelect();
+
+        // 1. 新增學員邏輯 + 回調檢查與反饋
+        addStudentForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('new-name').value.trim();
+            const age = document.getElementById('new-age').value;
+            const height = document.getElementById('new-height').value;
+
+            const newStudent = {
+                id: Date.now().toString(),
+                name,
+                age,
+                height
+            };
+
+            try {
+                // 寫入陣列與 LocalStorage
+                students.push(newStudent);
+                localStorage.setItem('students', JSON.stringify(students));
+
+                // 回調檢查：確認該 ID 是否真的存在於 Storage 內
+                const verifyStorage = JSON.parse(localStorage.getItem('students')) || [];
+                const isSaved = verifyStorage.some(s => s.id === newStudent.id);
+
+                if (isSaved) {
+                    alert(`【系統回調確認】\n學員「${name}」已成功登記！`);
+                    addStudentForm.reset();
+                    updateStudentSelect();
+                    
+                    // 自動選中剛建立的新學員
+                    studentSelect.value = newStudent.id;
+                    studentSelect.dispatchEvent(new Event('change'));
+                } else {
+                    throw new Error('寫入至 LocalStorage 後找不到該筆資料。');
+                }
+            } catch (err) {
+                alert(`【錯誤】新學員登記失敗：${err.message}`);
+                console.error('Add student error:', err);
+            }
+        });
+
+        // 2. 聯動載入學員資料與歷史紀錄
+        studentSelect.addEventListener('change', function() {
+            const selectedId = this.value;
+            
+            if (!selectedId) {
+                studentCard.classList.add('hidden');
+                historyTableBody.innerHTML = '<tr class="border-b text-gray-400 text-center"><td colspan="18" class="py-6">尚未選擇學員或無歷史數據</td></tr>';
+                return;
+            }
+
+            // 顯示學員卡片資訊
+            const student = students.find(s => s.id === selectedId);
+            if (student) {
+                document.getElementById('card-name').textContent = student.name;
+                document.getElementById('card-age').textContent = student.age;
+                document.getElementById('card-height').textContent = student.height;
+                studentCard.classList.remove('hidden');
+            }
+
+            // 過濾並渲染該學員的歷史數據 (對應 18 欄)
+            const studentRecords = records.filter(r => r.studentId === selectedId);
+            historyTableBody.innerHTML = '';
+
+            if (studentRecords.length === 0) {
+                historyTableBody.innerHTML = '<tr class="border-b text-gray-400 text-center"><td colspan="18" class="py-6">此學員目前無身體組成紀錄</td></tr>';
+            } else {
+                studentRecords.sort((a,b) => new Date(b.date) - new Date(a.date)); // 最新排在最上面
+                studentRecords.forEach(r => {
+                    const row = `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="px-4 py-3 font-medium border-r">${r.date}</td>
+                            <td class="px-4 py-3 border-r">${r.weight} kg</td>
+                            <td class="px-4 py-3 border-r">${r.muscle} kg</td>
+                            <td class="px-4 py-3 border-r">${r.fat} %</td>
+                            <td class="px-4 py-3 border-r">${r.water ? r.water + ' L' : '--'}</td>
+                            <td class="px-4 py-3 border-r">${r.visceral || '--'}</td>
+                            <td class="px-4 py-3 border-r">${r.bodytype || '--'}</td>
+                            <td class="px-4 py-3 border-r">${r.bmr} kcal</td>
+                            <td class="px-4 py-3 border-r">${r.m_ra || '--'}</td>
+                            <td class="px-4 py-3 border-r">${r.m_la || '--'}</td>
+                            <td class="px-4 py-3 border-r">${r.m_trunk || '--'}</td>
+                            <td class="px-4 py-3 border-r">${r.m_rl || '--'}</td>
+                            <td class="px-4 py-3 border-r">${r.m_ll || '--'}</td>
+                            <td class="px-4 py-3 border-r">${r.f_ra || '--'}</td>
+                            <td class="px-4 py-3 border-r">${r.f_la || '--'}</td>
+                            <td class="px-4 py-3 border-r">${r.f_trunk || '--'}</td>
+                            <td class="px-4 py-3 border-r">${r.f_rl || '--'}</td>
+                            <td class="px-4 py-3 border-r">${r.f_ll || '--'}</td>
+                        </tr>
+                    `;
+                    historyTableBody.innerHTML += row;
+                });
+            }
+        });
+
+        // 3. 儲存多維度數據邏輯
+        recordForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const selectedStudentId = studentSelect.value;
+            if (!selectedStudentId) {
+                alert('請先在左側面板「選擇學員」後，再進行數據儲存！');
+                return;
+            }
+
+            // 收集擴充後的數據
+            const newRecord = {
+                studentId: selectedStudentId,
+                date: recordDate.value,
+                weight: document.getElementById('f-weight').value,
+                muscle: document.getElementById('f-muscle').value,
+                fat: document.getElementById('f-fat').value,
+                water: document.getElementById('f-water').value,
+                visceral: document.getElementById('f-visceral').value,
+                bodytype: document.getElementById('f-bodytype').value,
+                bmr: document.getElementById('f-bmr').value,
+                m_ra: document.getElementById('f-m-ra').value,
+                m_la: document.getElementById('f-m-la').value,
+                m_trunk: document.getElementById('f-m-trunk').value,
+                m_rl: document.getElementById('f-m-rl').value,
+                m_ll: document.getElementById('f-m-ll').value,
+                f_ra: document.getElementById('f-f-ra').value,
+                f_la: document.getElementById('f-f-la').value,
+                f_trunk: document.getElementById('f-f-trunk').value,
+                f_rl: document.getElementById('f-f-rl').value,
+                f_ll: document.getElementById('f-f-ll').value
+            };
+
+            records.push(newRecord);
+            localStorage.setItem('records', JSON.stringify(records));
+
+            alert('學員身體組成資料儲存成功！表單已為您自動清空。');
+            this.reset();
+            recordDate.value = new Date().toISOString().substring(0, 10);
+            document.getElementById('f-bodytype').value = "";
+
+            // 重新整理歷史表格
+            studentSelect.dispatchEvent(new Event('change'));
+        });
+    </script>
+
+</body>
+</html>
