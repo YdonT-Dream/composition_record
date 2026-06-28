@@ -104,27 +104,48 @@
                             <div><label class="block text-xs text-gray-600">體脂肪率 (%)</label><input type="number" id="f-fat" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
                             <div><label class="block text-xs text-gray-600">基礎代謝率 (kcal)</label><input type="number" id="f-bmr" step="1" required class="w-full border p-2 rounded-lg mt-1"></div>
                         </div>
-                    </div>
-
-                    <div>
-                        <h3 class="text-md font-semibold text-indigo-900 border-b border-indigo-50 pb-1 mb-3">2. 各部位肌肉量 (kg)</h3>
-                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                            <div><label class="block text-xs text-gray-600">右手肌肉量</label><input type="number" id="f-m-ra" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
-                            <div><label class="block text-xs text-gray-600">左手肌肉量</label><input type="number" id="f-m-la" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
-                            <div><label class="block text-xs text-gray-600">軀幹肌肉量</label><input type="number" id="f-m-trunk" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
-                            <div><label class="block text-xs text-gray-600">右腿肌肉量</label><input type="number" id="f-m-rl" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
-                            <div><label class="block text-xs text-gray-600">左腿肌肉量</label><input type="number" id="f-m-ll" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                            <div>
+                                <label class="block text-xs text-gray-600">體水分 (L 或 %)</label>
+                                <input type="number" id="f-water" step="0.1" placeholder="例如: 35.2" class="w-full border p-2 rounded-lg mt-1">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">內臟脂肪等級</label>
+                                <input type="number" id="f-visceral" step="1" min="1" max="50" placeholder="例如: 6" class="w-full border p-2 rounded-lg mt-1">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">身體類型 (Body Type)</label>
+                                <select id="f-bodytype" class="w-full border p-2 rounded-lg mt-1 bg-white">
+                                    <option value="">-- 請選擇身體類型 --</option>
+                                    <option value="肌肉型">肌肉型 (Solid)</option>
+                                    <option value="標準型">標準型 (Standard)</option>
+                                    <option value="隱性肥胖">隱性肥胖 (Skinny Fat)</option>
+                                    <option value="肥胖型">肥胖型 (Obese)</option>
+                                    <option value="偏瘦型">偏瘦型 (Underweight)</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
                     <div>
-                        <h3 class="text-md font-semibold text-indigo-900 border-b border-indigo-50 pb-1 mb-3">3. 各部位體脂肪 (kg)</h3>
+                        <h3 class="text-md font-semibold text-indigo-900 border-b border-indigo-50 pb-1 mb-3">2. 各部位肌肉量 (kg) <span class="text-xs font-normal text-gray-400">(非必填)</span></h3>
                         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                            <div><label class="block text-xs text-gray-600">右手體脂肪</label><input type="number" id="f-f-ra" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
-                            <div><label class="block text-xs text-gray-600">左手體脂肪</label><input type="number" id="f-f-la" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
-                            <div><label class="block text-xs text-gray-600">軀幹體脂肪</label><input type="number" id="f-f-trunk" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
-                            <div><label class="block text-xs text-gray-600">右腿體脂肪</label><input type="number" id="f-f-rl" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
-                            <div><label class="block text-xs text-gray-600">左腿體脂肪</label><input type="number" id="f-f-ll" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">右手肌肉量</label><input type="number" id="f-m-ra" step="0.1" class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">左手肌肉量</label><input type="number" id="f-m-la" step="0.1" class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">軀幹肌肉量</label><input type="number" id="f-m-trunk" step="0.1" class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">右腿肌肉量</label><input type="number" id="f-m-rl" step="0.1" class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">左腿肌肉量</label><input type="number" id="f-m-ll" step="0.1" class="w-full border p-2 rounded-lg mt-1"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-md font-semibold text-indigo-900 border-b border-indigo-50 pb-1 mb-3">3. 各部位體脂肪 (kg) <span class="text-xs font-normal text-gray-400">(非必填)</span></h3>
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <div><label class="block text-xs text-gray-600">右手體脂肪</label><input type="number" id="f-f-ra" step="0.1" class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">左手體脂肪</label><input type="number" id="f-f-la" step="0.1" class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">軀幹體脂肪</label><input type="number" id="f-f-trunk" step="0.1" class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">右腿體脂肪</label><input type="number" id="f-f-rl" step="0.1" class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">左腿體脂肪</label><input type="number" id="f-f-ll" step="0.1" class="w-full border p-2 rounded-lg mt-1"></div>
                         </div>
                     </div>
 
@@ -155,42 +176,11 @@
                             <tr>
                                 <th scope="col" class="px-4 py-3 border-r">日期</th>
                                 <th scope="col" class="px-4 py-3 border-r">體重(kg)</th>
-                                <th scope="col" class="px-4 py-3 border-r">骨骼肌重(kg)</th>
+                                <th scope="col" class="px-4 py-3 border-r">骨骼肌(kg)</th>
                                 <th scope="col" class="px-4 py-3 border-r">體脂率(%)</th>
-                                <th scope="col" class="px-4 py-3 border-r">基礎代謝(kcal)</th>
-                                <th scope="col" class="px-4 py-3 border-r">右手肌肉</th>
-                                <th scope="col" class="px-4 py-3 border-r">左手肌肉</th>
-                                <th scope="col" class="px-4 py-3 border-r">軀幹肌肉</th>
-                                <th scope="col" class="px-4 py-3 border-r">右腿肌肉</th>
-                                <th scope="col" class="px-4 py-3 border-r">左腿肌肉</th>
-                                <th scope="col" class="px-4 py-3 border-r">右手脂肪</th>
-                                <th scope="col" class="px-4 py-3 border-r">左手脂肪</th>
-                                <th scope="col" class="px-4 py-3 border-r">軀幹脂肪</th>
-                                <th scope="col" class="px-4 py-3 border-r">右腿脂肪</th>
-                                <th scope="col" class="px-4 py-3 border-r">左腿脂肪</th>
-                            </tr>
-                        </thead>
-                        <tbody id="history-table-body">
-                            <tr class="border-b text-gray-400 text-center">
-                                <td colspan="15" class="py-6">尚未選擇學員或無歷史數據</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-        </div>
-    </main>
-
-    <script>
-        // 初始化 LocalStorage 資料
-        let students = JSON.parse(localStorage.getItem('students')) || [];
-        let records = JSON.parse(localStorage.getItem('records')) || [];
-
-        // DOM 元素
-        const studentSelect = document.getElementById('student-select');
-        const studentCard = document.getElementById('student-card');
-        const addStudentForm = document.getElementById('add-student-form');
-        const recordForm = document.getElementById('record-form');
-        const recordDate = document.getElementById('record-date');
-        const historyTableBody = document.getElementById('history-
+                                <th scope="col" class="px-4 py-3 border-r">水分</th>
+                                <th scope="col" class="px-4 py-3 border-r">內臟脂肪</th>
+                                <th scope="col" class="px-4 py-3 border-r">身體類型</th>
+                                <th scope="col" class="px-4 py-3 border-r">基礎代謝</th>
+                                <th scope="col" class="px-4 py-3 border-r">右手肌</th>
+                                <th scope="col" class="px-4 py-3 border-r">左手肌
