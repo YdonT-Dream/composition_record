@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>專業學員身體組成管理系統 (V3)</title>
+    <title>專業學員身體組成管理系統</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         /* 列印樣式隔離：列印時隱藏表單與按鈕 */
         @media print {
@@ -163,8 +164,8 @@
                 <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2">
                     <i class="fa-solid fa-chart-line text-indigo-600"></i> 數據視覺化趨勢
                 </h2>
-                <div class="h-64 bg-gray-50 rounded-lg border flex items-center justify-center text-gray-400">
-                    <i class="fa-solid fa-chart-area fa-2x"></i> &nbsp; [折線圖實時繪製區：體重、體脂百分比、肌肉量]
+                <div class="h-64">
+                    <canvas id="trendChart" class="w-full h-full"></canvas>
                 </div>
             </section>
 
@@ -209,8 +210,7 @@
     </main>
 
     <script>
-        console.log("【系統啟動】載入資料庫狀態...");
-        // 初始化 LocalStorage 資料，避免取出 null
+        // 初始化 LocalStorage 資料
         let students = JSON.parse(localStorage.getItem('students')) || [];
         let records = JSON.parse(localStorage.getItem('records')) || [];
 
@@ -222,6 +222,50 @@
         const recordDate = document.getElementById('record-date');
         const historyTableBody = document.getElementById('history-table-body');
 
+        // 初始化 Chart.js 實體
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        let trendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [], // 日期
+                datasets: [
+                    {
+                        label: '體重 (kg)',
+                        data: [],
+                        borderColor: '#4f46e5', // 靛色
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        tension: 0.1,
+                        fill: true
+                    },
+                    {
+                        label: '骨骼肌重 (kg)',
+                        data: [],
+                        borderColor: '#059669', // 翡翠綠
+                        backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                        tension: 0.1,
+                        fill: true
+                    },
+                    {
+                        label: '體脂肪率 (%)',
+                        data: [],
+                        borderColor: '#dc2626', // 亮紅色
+                        backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                        tension: 0.1,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+
         // 載入學員下拉選單選項
         function updateStudentSelect() {
             studentSelect.innerHTML = '<option value="">-- 請選擇或搜尋學員 --</option>';
@@ -231,27 +275,38 @@
                 option.textContent = `${student.name} (身高: ${student.height}cm)`;
                 studentSelect.appendChild(option);
             });
-            console.log("學員下拉選單已重繪，當前總人數：", students.length);
         }
 
         // 初始化執行
         recordDate.value = new Date().toISOString().substring(0, 10);
         updateStudentSelect();
 
+        // 更新折線圖資料函式
+        function updateChart(studentRecords) {
+            // 依照日期由舊到新排序以繪製正確的時間軸
+            const sortedRecords = [...studentRecords].sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            const labels = sortedRecords.map(r => r.date);
+            const weightData = sortedRecords.map(r => parseFloat(r.weight) || 0);
+            const muscleData = sortedRecords.map(r => parseFloat(r.muscle) || 0);
+            const fatData = sortedRecords.map(r => parseFloat(r.fat) || 0);
+
+            trendChart.data.labels = labels;
+            trendChart.data.datasets[0].data = weightData;
+            trendChart.data.datasets[1].data = muscleData;
+            trendChart.data.datasets[2].data = fatData;
+            
+            trendChart.update();
+        }
+
         // 1. 新增學員邏輯 + 回調檢查與反饋
         addStudentForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            console.log("【新增學員】動作被觸發");
-
-            const nameInput = document.getElementById('new-name');
-            const ageInput = document.getElementById('new-age');
-            const heightInput = document.getElementById('new-height');
             
-            const name = nameInput.value.trim();
-            const age = ageInput.value;
-            const height = heightInput.value;
+            const name = document.getElementById('new-name').value.trim();
+            const age = document.getElementById('new-age').value;
+            const height = document.getElementById('new-height').value;
 
-            // 建立學員物件
             const newStudent = {
                 id: Date.now().toString(),
                 name,
@@ -260,73 +315,61 @@
             };
 
             try {
-                // 從 Storage 再次讀取最新狀態，防範非預期的並行寫入衝突
-                let latestStudents = JSON.parse(localStorage.getItem('students')) || [];
-                
-                // 寫入陣列與 LocalStorage
-                latestStudents.push(newStudent);
-                localStorage.setItem('students', JSON.stringify(latestStudents));
-                
-                // 更新全域變數
-                students = latestStudents;
+                students.push(newStudent);
+                localStorage.setItem('students', JSON.stringify(students));
 
-                // 回調檢查：確認該 ID 是否真的寫入成功
                 const verifyStorage = JSON.parse(localStorage.getItem('students')) || [];
                 const isSaved = verifyStorage.some(s => s.id === newStudent.id);
 
                 if (isSaved) {
-                    alert(`【系統回調成功】\n學員「${name}」已成功登記！`);
-                    
-                    // 乾淨重置表單欄位，不殘留舊狀態
+                    alert(`【系統回調確認】\n學員「${name}」已成功登記！`);
                     addStudentForm.reset();
-                    
-                    // 即時更新下拉選單
                     updateStudentSelect();
                     
-                    // 自動選中剛建立的新學員
                     studentSelect.value = newStudent.id;
                     studentSelect.dispatchEvent(new Event('change'));
                 } else {
-                    throw new Error('寫入至 LocalStorage 後找不到該筆資料，可能寫入被攔截或儲存空間異常。');
+                    throw new Error('寫入至 LocalStorage 後找不到該筆資料。');
                 }
             } catch (err) {
-                alert(`【錯誤】新學員登記失敗，請檢查控制台：${err.message}`);
-                console.error('Add student critical error:', err);
+                alert(`【錯誤】新學員登記失敗：${err.message}`);
+                console.error('Add student error:', err);
             }
         });
 
         // 2. 聯動載入學員資料與歷史紀錄
         studentSelect.addEventListener('change', function() {
             const selectedId = this.value;
-            console.log("學員下拉選單變更，當前選中 ID:", selectedId);
             
             if (!selectedId) {
                 studentCard.classList.add('hidden');
                 historyTableBody.innerHTML = '<tr class="border-b text-gray-400 text-center"><td colspan="18" class="py-6">尚未選擇學員或無歷史數據</td></tr>';
+                
+                // 清空圖表
+                updateChart([]);
                 return;
             }
 
-            // 顯示學員卡片資訊
             const student = students.find(s => s.id === selectedId);
             if (student) {
                 document.getElementById('card-name').textContent = student.name;
                 document.getElementById('card-age').textContent = student.age;
                 document.getElementById('card-height').textContent = student.height;
                 studentCard.classList.remove('hidden');
-            } else {
-                console.warn("未在記憶體中找到該學員，可能資料已被清除。");
-                studentCard.classList.add('hidden');
-                return;
             }
 
-            // 過濾並渲染該學員的歷史數據 (對應 18 欄)
             const studentRecords = records.filter(r => r.studentId === selectedId);
             historyTableBody.innerHTML = '';
 
             if (studentRecords.length === 0) {
                 historyTableBody.innerHTML = '<tr class="border-b text-gray-400 text-center"><td colspan="18" class="py-6">此學員目前無身體組成紀錄</td></tr>';
+                updateChart([]);
             } else {
                 studentRecords.sort((a,b) => new Date(b.date) - new Date(a.date)); // 最新排在最上面
+                
+                // 繪製圖表 (傳入未排序的資料，函式內部會自動由舊到新排序)
+                updateChart(studentRecords);
+
                 studentRecords.forEach(r => {
                     const row = `
                         <tr class="border-b hover:bg-gray-50">
@@ -358,7 +401,6 @@
         // 3. 儲存多維度數據邏輯
         recordForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            console.log("【儲存身體組成】動作被觸發");
             
             const selectedStudentId = studentSelect.value;
             if (!selectedStudentId) {
@@ -366,7 +408,6 @@
                 return;
             }
 
-            // 收集擴充後的數據
             const newRecord = {
                 studentId: selectedStudentId,
                 date: recordDate.value,
@@ -389,20 +430,14 @@
                 f_ll: document.getElementById('f-f-ll').value
             };
 
-            // 讀取最新 records 狀態再寫入
-            let latestRecords = JSON.parse(localStorage.getItem('records')) || [];
-            latestRecords.push(newRecord);
-            localStorage.setItem('records', JSON.stringify(latestRecords));
-            
-            // 同步記憶體狀態
-            records = latestRecords;
+            records.push(newRecord);
+            localStorage.setItem('records', JSON.stringify(records));
 
             alert('學員身體組成資料儲存成功！表單已為您自動清空。');
             this.reset();
             recordDate.value = new Date().toISOString().substring(0, 10);
             document.getElementById('f-bodytype').value = "";
 
-            // 重新整理歷史表格
             studentSelect.dispatchEvent(new Event('change'));
         });
     </script>
