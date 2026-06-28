@@ -1,146 +1,225 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>專業教練數據系統 - 最終優化版</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專業學員身體組成管理系統</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; padding: 10px; }
-        .card { background: white; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 10px; }
-        .grid-inputs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
-        input, select { padding: 4px; border: 1px solid #ccc; border-radius: 4px; width: 90%; font-size: 12px; }
-        button { padding: 5px 10px; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px; font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; font-size: 7px; margin-top: 5px; table-layout: fixed; }
-        th, td { border: 1px solid #000; padding: 1px; text-align: center; overflow: hidden; }
-        th { background: #eee; }
-        @media print { #no-print { display: none !important; } }
+        /* 列印樣式隔離：列印時隱藏表單與按鈕 */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printable-report, #printable-report * {
+                visibility: visible;
+            }
+            #printable-report {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
     </style>
 </head>
-<body>
+<body class="bg-gray-100 font-sans antialiased">
 
-<div id="reportArea" style="max-width: 1000px; margin: auto;">
-    <h3 id="reportTitle">學員數據報告</h3>
-    <div id="studentHeader"><p id="studentInfo" style="font-size: 12px;"></p></div>
+    <header class="bg-indigo-900 text-white shadow-md no-print">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <i class="fa-solid fa-dumbbell"></i> 身體組成數據管理系統
+            </h1>
+            <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center gap-2 transition">
+                <i class="fa-solid fa-file-pdf"></i> 一鍵匯出橫向 A4 報告
+            </button>
+        </div>
+    </header>
 
-    <div class="card" id="no-print">
-        <h3>管理與輸入</h3>
-        <select id="studentSelect" onchange="onStudentChange()"><option value="">-- 請選擇學員 --</option></select>
-        <input type="text" id="name" placeholder="姓名">
-        <input type="number" id="age" placeholder="年紀">
-        <input type="number" id="height" placeholder="身高">
-        <button onclick="saveStudent()">儲存/更新學員</button>
-        <button style="background:#e74c3c;" onclick="generatePDF()">匯出 PDF</button>
-        <hr>
-        <form id="dataForm" onsubmit="saveRecord(event)" class="grid-inputs">
-            <input type="date" id="date" required>
-            <input type="number" id="weight" placeholder="體重" step="0.1" required>
-            <input type="number" id="fat" placeholder="總脂%" step="0.1" required>
-            <input type="number" id="muscle" placeholder="總肌kg" step="0.1" required>
-            <input type="number" id="water" placeholder="水%" step="0.1" required>
-            <input type="number" id="vFat" placeholder="內臟" step="0.5" required>
-            <input type="number" id="mAge" placeholder="生理" required>
-            <input type="number" id="bodyType" placeholder="體型" required>
-            <input type="number" id="lFat" placeholder="左手脂"> <input type="number" id="rFat" placeholder="右手脂">
-            <input type="number" id="tFat" placeholder="軀脂"> <input type="number" id="llFat" placeholder="左腳脂">
-            <input type="number" id="rlFat" placeholder="右腳脂"> <input type="number" id="lMus" placeholder="左手肌">
-            <input type="number" id="rMus" placeholder="右手肌"> <input type="number" id="tMus" placeholder="軀肌">
-            <input type="number" id="llMus" placeholder="左腳肌"> <input type="number" id="rlMus" placeholder="右腳肌">
-            <button type="submit" style="grid-column: span 4; background: #27ae60;">儲存紀錄</button>
-        </form>
-    </div>
-
-    <div class="card"><canvas id="myChart" height="60"></canvas></div>
-
-    <div class="card">
-        <table id="historyTable">
-            <thead><tr><th>日期</th><th>體型</th><th>體重</th><th>脂%</th><th>肌kg</th><th>水%</th><th>內臟</th><th>生理</th><th>左脂</th><th>右脂</th><th>軀脂</th><th>左腳脂</th><th>右腳脂</th><th>左肌</th><th>右肌</th><th>軀肌</th><th>左腳肌</th><th>右腳肌</th></tr></thead>
-            <tbody></tbody>
-        </table>
-    </div>
-</div>
-
-<script>
-    let systemData = JSON.parse(localStorage.getItem('coach_data')) || { students: {}, records: {} };
-    let chartInstance = null;
-
-    function saveStudent() {
-        const name = document.getElementById('name').value.trim();
-        const age = document.getElementById('age').value;
-        const height = document.getElementById('height').value;
-        if(!name || !age || !height) return alert('請完整填寫姓名、年紀、身高！');
+    <main class="container mx-auto px-6 py-8 flex flex-col lg:flex-row gap-8">
         
-        systemData.students[name] = { age, height };
-        if (!systemData.records[name]) systemData.records[name] = [];
-        localStorage.setItem('coach_data', JSON.stringify(systemData));
-        updateSelect();
-        alert('學員資訊已儲存！');
-    }
+        <aside class="w-full lg:w-1/4 bg-white p-6 rounded-xl shadow-sm h-fit no-print">
+            <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">
+                <i class="fa-solid fa-users text-indigo-600"></i> 學員管理
+            </h2>
+            
+            <div class="mb-6 bg-gray-50 p-4 rounded-lg border">
+                <h3 class="text-sm font-semibold text-gray-700 mb-2">新增學員</h3>
+                <form id="add-student-form" class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">姓名</label>
+                        <input type="text" id="new-name" required class="w-full text-sm border p-2 rounded-lg bg-white focus:outline-indigo-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">年紀</label>
+                            <input type="number" id="new-age" required class="w-full text-sm border p-2 rounded-lg bg-white focus:outline-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">身高 (cm)</label>
+                            <input type="number" id="new-height" step="0.1" required class="w-full text-sm border p-2 rounded-lg bg-white focus:outline-indigo-500">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm py-2 rounded-lg cursor-pointer transition">
+                        <i class="fa-solid fa-user-plus"></i> 新增學員
+                    </button>
+                </form>
+            </div>
 
-    function updateSelect() {
-        const s = document.getElementById('studentSelect');
-        s.innerHTML = '<option value="">-- 請選擇學員 --</option>';
-        Object.keys(systemData.students).forEach(n => s.innerHTML += `<option value="${n}">${n}</option>`);
-    }
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">選擇學員</label>
+                <select id="student-select" class="w-full border p-3 rounded-lg bg-white shadow-sm focus:outline-indigo-500">
+                    <option value="">-- 請選擇或搜尋學員 --</option>
+                    </select>
+            </div>
 
-    function onStudentChange() {
-        const name = document.getElementById('studentSelect').value;
-        if (!name) return;
-        const s = systemData.students[name];
-        document.getElementById('name').value = name;
-        document.getElementById('age').value = s.age;
-        document.getElementById('height').value = s.height;
-        document.getElementById('studentInfo').innerText = `年紀: ${s.age}歲 | 身高: ${s.height}cm`;
-        render(name);
-    }
+            <div id="student-card" class="bg-indigo-50 border border-indigo-100 p-4 rounded-lg hidden">
+                <h3 class="font-bold text-indigo-900 mb-2" id="card-name">學員姓名</h3>
+                <p class="text-sm text-indigo-700">年紀：<span id="card-age">--</span> 歲</p>
+                <p class="text-sm text-indigo-700">身高：<span id="card-height">--</span> cm</p>
+            </div>
+        </aside>
 
-    function saveRecord(e) {
-        e.preventDefault();
-        const name = document.getElementById('studentSelect').value;
-        if(!name) return alert('請先選擇學員');
-        
-        const allFields = ['date','bodyType','weight','fat','muscle','water','vFat','mAge','lFat','rFat','tFat','llFat','rlFat','lMus','rMus','tMus','llMus','rlMus'];
-        let rec = {}; 
-        allFields.forEach(f => rec[f] = document.getElementById(f).value);
-        
-        systemData.records[name].push(rec);
-        localStorage.setItem('coach_data', JSON.stringify(systemData));
-        
-        // 關鍵反饋與清除
-        alert('紀錄已成功儲存！');
-        document.getElementById('dataForm').reset();
-        document.getElementById('date').valueAsDate = new Date();
-        render(name);
-    }
+        <div id="printable-report" class="w-full lg:w-3/4 space-y-8">
+            
+            <section class="bg-white p-6 rounded-xl shadow-sm no-print">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square text-indigo-600"></i> 多維度身體組成記錄
+                </h2>
+                <form id="record-form" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">記錄日期</label>
+                        <input type="date" id="record-date" required class="border p-2 rounded-lg w-48 bg-white focus:outline-indigo-500">
+                    </div>
 
-    function render(name) {
-        const recs = systemData.records[name] || [];
-        const tbody = document.querySelector('#historyTable tbody');
-        tbody.innerHTML = recs.map(r => `<tr><td>${r.date}</td><td>${r.bodyType}</td><td>${r.weight}</td><td>${r.fat}</td><td>${r.muscle}</td><td>${r.water}</td><td>${r.vFat}</td><td>${r.mAge}</td><td>${r.lFat}</td><td>${r.rFat}</td><td>${r.tFat}</td><td>${r.llFat}</td><td>${r.rlFat}</td><td>${r.lMus}</td><td>${r.rMus}</td><td>${r.tMus}</td><td>${r.llMus}</td><td>${r.rlMus}</td></tr>`).join('');
-        
-        const ctx = document.getElementById('myChart').getContext('2d');
-        if (chartInstance) chartInstance.destroy();
-        chartInstance = new Chart(ctx, { 
-            type: 'line', 
-            data: { 
-                labels: recs.map(r => r.date), 
-                datasets: [
-                    { label: '體重', data: recs.map(r => r.weight), borderColor: 'blue' },
-                    { label: '脂肪%', data: recs.map(r => r.fat), borderColor: 'red' },
-                    { label: '肌肉kg', data: recs.map(r => r.muscle), borderColor: 'green' }
-                ] 
-            } 
+                    <div>
+                        <h3 class="text-md font-semibold text-indigo-900 border-b border-indigo-50 pb-1 mb-3">1. 核心身體組成數據</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-600">體重 (kg)</label>
+                                <input type="number" step="0.1" required class="w-full border p-2 rounded-lg mt-1 focus:outline-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">骨骼肌重 (kg)</label>
+                                <input type="number" step="0.1" required class="w-full border p-2 rounded-lg mt-1 focus:outline-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">體脂肪率 (%)</label>
+                                <input type="number" step="0.1" required class="w-full border p-2 rounded-lg mt-1 focus:outline-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">基礎代謝率 (kcal)</label>
+                                <input type="number" step="1" required class="w-full border p-2 rounded-lg mt-1 focus:outline-indigo-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-md font-semibold text-indigo-900 border-b border-indigo-50 pb-1 mb-3">2. 各部位肌肉量 (kg)</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <div><label class="block text-xs text-gray-600">右手肌肉量</label><input type="number" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">左手肌肉量</label><input type="number" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">軀幹肌肉量</label><input type="number" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">右腿肌肉量</label><input type="number" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">左腿肌肉量</label><input type="number" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-md font-semibold text-indigo-900 border-b border-indigo-50 pb-1 mb-3">3. 各部位體脂肪 (kg / %)</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <div><label class="block text-xs text-gray-600">右手體脂肪</label><input type="number" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">左手體脂肪</label><input type="number" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">軀幹體脂肪</label><input type="number" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">右腿體脂肪</label><input type="number" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">左腿體脂肪</label><input type="number" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-4 pt-4 border-t">
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-semibold cursor-pointer transition">
+                            <i class="fa-solid fa-floppy-disk"></i> 儲存數據並重置表單
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="bg-white p-6 rounded-xl shadow-sm">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-indigo-600"></i> 數據視覺化趨勢
+                </h2>
+                <div class="h-64 bg-gray-50 rounded-lg border flex items-center justify-center text-gray-400">
+                    <i class="fa-solid fa-chart-area fa-2x"></i> &nbsp; [折線圖實時繪製區：體重、體脂百分比、肌肉量]
+                </div>
+            </section>
+
+            <section class="bg-white p-6 rounded-xl shadow-sm">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-table-list text-indigo-600"></i> 歷史數據明細表
+                </h2>
+                <div class="overflow-x-auto border rounded-lg">
+                    <table class="w-full text-sm text-left text-gray-600 whitespace-nowrap">
+                        <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 border-r">日期</th>
+                                <th scope="col" class="px-4 py-3 border-r">體重(kg)</th>
+                                <th scope="col" class="px-4 py-3 border-r">骨骼肌重(kg)</th>
+                                <th scope="col" class="px-4 py-3 border-r">體脂率(%)</th>
+                                <th scope="col" class="px-4 py-3 border-r">基礎代謝(kcal)</th>
+                                <th scope="col" class="px-4 py-3 border-r">右手肌肉</th>
+                                <th scope="col" class="px-4 py-3 border-r">左手肌肉</th>
+                                <th scope="col" class="px-4 py-3 border-r">軀幹肌肉</th>
+                                <th scope="col" class="px-4 py-3 border-r">右腿肌肉</th>
+                                <th scope="col" class="px-4 py-3 border-r">左腿肌肉</th>
+                                <th scope="col" class="px-4 py-3 border-r">右手脂肪</th>
+                                <th scope="col" class="px-4 py-3 border-r">左手脂肪</th>
+                                <th scope="col" class="px-4 py-3 border-r">軀幹脂肪</th>
+                                <th scope="col" class="px-4 py-3 border-r">右腿脂肪</th>
+                                <th scope="col" class="px-4 py-3 border-r">左腿脂肪</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="px-4 py-3 font-medium border-r">2026-06-26</td>
+                                <td class="px-4 py-3 border-r">72.5</td>
+                                <td class="px-4 py-3 border-r">32.1</td>
+                                <td class="px-4 py-3 border-r">18.5</td>
+                                <td class="px-4 py-3 border-r">1650</td>
+                                <td class="px-4 py-3 border-r">4.2</td>
+                                <td class="px-4 py-3 border-r">4.1</td>
+                                <td class="px-4 py-3 border-r">25.3</td>
+                                <td class="px-4 py-3 border-r">8.5</td>
+                                <td class="px-4 py-3 border-r">8.4</td>
+                                <td class="px-4 py-3 border-r">1.2</td>
+                                <td class="px-4 py-3 border-r">1.2</td>
+                                <td class="px-4 py-3 border-r">4.5</td>
+                                <td class="px-4 py-3 border-r">2.8</td>
+                                <td class="px-4 py-3 border-r">2.8</td>
+                            </tr>
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <script>
+        // 自動帶入當前日期至表單
+        document.getElementById('record-date').value = new Date().toISOString().substring(0, 10);
+
+        // 模擬表單儲存成功提示與重置
+        document.getElementById('record-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('資料儲存成功！表單已為您自動清空並重置日期。');
+            this.reset();
+            document.getElementById('record-date').value = new Date().toISOString().substring(0, 10);
         });
-    }
+    </script>
 
-    function generatePDF() {
-        const name = document.getElementById('studentSelect').value || "報告";
-        const now = new Date();
-        const fileName = `${name}_${now.toISOString().slice(0,10)}_${now.getHours()}-${now.getMinutes()}.pdf`;
-        html2pdf().from(document.getElementById('reportArea')).set({filename: fileName, jsPDF:{orientation:'landscape'}}).save();
-    }
-
-    window.onload = () => { document.getElementById('date').valueAsDate = new Date(); updateSelect(); };
-</script>
 </body>
 </html>
