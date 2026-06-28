@@ -31,13 +31,22 @@
 <body class="bg-gray-100 font-sans antialiased">
 
     <header class="bg-indigo-900 text-white shadow-md no-print">
-        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+        <div class="container mx-auto px-6 py-4 flex flex-wrap justify-between items-center gap-4">
             <h1 class="text-xl font-bold flex items-center gap-2">
                 <i class="fa-solid fa-dumbbell"></i> 身體組成數據管理系統
             </h1>
-            <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center gap-2 transition">
-                <i class="fa-solid fa-file-pdf"></i> 一鍵匯出橫向 A4 報告
-            </button>
+            <div class="flex items-center gap-3">
+                <button onclick="exportJson()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center gap-2 transition text-sm">
+                    <i class="fa-solid fa-download"></i> 匯出 JSON 紀錄
+                </button>
+                <input type="file" id="import-file" accept=".json" class="hidden" onchange="importJson(this)">
+                <button onclick="document.getElementById('import-file').click()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center gap-2 transition text-sm">
+                    <i class="fa-solid fa-upload"></i> 匯入 JSON 紀錄
+                </button>
+                <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center gap-2 transition text-sm">
+                    <i class="fa-solid fa-file-pdf"></i> 匯出橫向 A4 報告
+                </button>
+            </div>
         </div>
     </header>
 
@@ -87,6 +96,21 @@
 
         <div id="printable-report" class="w-full lg:w-3/4 space-y-8">
             
+            <section id="report-header-section" class="bg-indigo-900 text-white p-6 rounded-xl shadow-sm hidden print:block">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-clipboard-user"></i> 學員身體組成報告
+                        </h2>
+                        <p class="text-indigo-200 text-sm mt-1">產出時間：<span id="report-time"></span></p>
+                    </div>
+                    <div class="bg-indigo-800/50 backdrop-blur-sm p-4 rounded-lg border border-indigo-700 text-right min-w-[200px]">
+                        <p class="text-lg font-extrabold text-white" id="report-name">--</p>
+                        <p class="text-sm text-indigo-200 mt-1">年紀：<span id="report-age">--</span> 歲 &nbsp;|&nbsp; 身高：<span id="report-height">--</span> cm</p>
+                    </div>
+                </div>
+            </section>
+
             <section class="bg-white p-6 rounded-xl shadow-sm no-print">
                 <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2">
                     <i class="fa-solid fa-pen-to-square text-indigo-600"></i> 多維度身體組成記錄
@@ -168,6 +192,8 @@
                     <canvas id="trendChart" class="w-full h-full"></canvas>
                 </div>
             </section>
+            
+            
 
             <section class="bg-white p-6 rounded-xl shadow-sm">
                 <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2">
@@ -283,9 +309,7 @@
 
         // 更新折線圖資料函式
         function updateChart(studentRecords) {
-            // 依照日期由舊到新排序以繪製正確的時間軸
             const sortedRecords = [...studentRecords].sort((a, b) => new Date(a.date) - new Date(b.date));
-            
             const labels = sortedRecords.map(r => r.date);
             const weightData = sortedRecords.map(r => parseFloat(r.weight) || 0);
             const muscleData = sortedRecords.map(r => parseFloat(r.muscle) || 0);
@@ -295,7 +319,6 @@
             trendChart.data.datasets[0].data = weightData;
             trendChart.data.datasets[1].data = muscleData;
             trendChart.data.datasets[2].data = fatData;
-            
             trendChart.update();
         }
 
@@ -337,25 +360,35 @@
             }
         });
 
-        // 2. 聯動載入學員資料與歷史紀錄
+        // 2. 聯動載入學員資料與歷史紀錄 (增強報表抬頭資訊)
         studentSelect.addEventListener('change', function() {
             const selectedId = this.value;
+            
+            const reportHeaderSec = document.getElementById('report-header-section');
             
             if (!selectedId) {
                 studentCard.classList.add('hidden');
                 historyTableBody.innerHTML = '<tr class="border-b text-gray-400 text-center"><td colspan="18" class="py-6">尚未選擇學員或無歷史數據</td></tr>';
                 
-                // 清空圖表
+                reportHeaderSec.classList.add('hidden');
                 updateChart([]);
                 return;
             }
 
             const student = students.find(s => s.id === selectedId);
             if (student) {
+                // 側邊欄卡片
                 document.getElementById('card-name').textContent = student.name;
                 document.getElementById('card-age').textContent = student.age;
                 document.getElementById('card-height').textContent = student.height;
                 studentCard.classList.remove('hidden');
+
+                // 列印報表抬頭 (A4 列印專用)
+                document.getElementById('report-name').textContent = student.name;
+                document.getElementById('report-age').textContent = student.age;
+                document.getElementById('report-height').textContent = student.height;
+                document.getElementById('report-time').textContent = new Date().toLocaleString('zh-TW', { hour12: false });
+                reportHeaderSec.classList.remove('hidden');
             }
 
             const studentRecords = records.filter(r => r.studentId === selectedId);
@@ -366,8 +399,6 @@
                 updateChart([]);
             } else {
                 studentRecords.sort((a,b) => new Date(b.date) - new Date(a.date)); // 最新排在最上面
-                
-                // 繪製圖表 (傳入未排序的資料，函式內部會自動由舊到新排序)
                 updateChart(studentRecords);
 
                 studentRecords.forEach(r => {
@@ -440,6 +471,57 @@
 
             studentSelect.dispatchEvent(new Event('change'));
         });
+
+        // 4. 匯出全部資料至 JSON 檔案
+        function exportJson() {
+            const dataToExport = {
+                students: students,
+                records: records
+            };
+            const jsonStr = JSON.stringify(dataToExport, null, 2);
+            const blob = new Blob([jsonStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `system_backup_${new Date().toISOString().substring(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 5. 從 JSON 檔案匯入資料 (直接覆蓋本地 LocalStorage)
+        function importJson(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    if (importedData.students && importedData.records) {
+                        // 更新記憶體狀態與 LocalStorage
+                        students = importedData.students;
+                        records = importedData.records;
+                        
+                        localStorage.setItem('students', JSON.stringify(students));
+                        localStorage.setItem('records', JSON.stringify(records));
+                        
+                        alert('資料匯入成功！系統將自動重新整理畫面。');
+                        location.reload(); // 重新整理頁面以載入新數據
+                    } else {
+                        alert('匯入失敗：JSON 檔案格式不正確（找不到學員或紀錄陣列）。');
+                    }
+                } catch (err) {
+                    alert('匯入發生例外錯誤，請確認檔案是否為合法的 JSON。');
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+            input.value = ""; // 清空 input 狀態，允許重複匯入同一個檔案
+        }
     </script>
 
 </body>
