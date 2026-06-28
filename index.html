@@ -43,7 +43,7 @@
                 <button onclick="document.getElementById('import-file').click()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center gap-2 transition text-sm">
                     <i class="fa-solid fa-upload"></i> 匯入 JSON 紀錄
                 </button>
-                <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center gap-2 transition text-sm">
+                <button onclick="triggerPdfExport()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center gap-2 transition text-sm">
                     <i class="fa-solid fa-file-pdf"></i> 匯出橫向 A4 報告
                 </button>
             </div>
@@ -193,7 +193,8 @@
                 </div>
             </section>
             
-            
+            <section class="no-print">
+                            </section>
 
             <section class="bg-white p-6 rounded-xl shadow-sm">
                 <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2">
@@ -292,9 +293,29 @@
             }
         });
 
-        // 載入學員下拉選單選項
+        // 去重加載學員下拉選單選項
         function updateStudentSelect() {
             studentSelect.innerHTML = '<option value="">-- 請選擇或搜尋學員 --</option>';
+            
+            // 防呆處理：過濾掉姓名與身高完全重複的實體，僅保留第一筆
+            const uniqueStudents = [];
+            const seenKeys = new Set();
+            
+            students.forEach(student => {
+                const uniqueKey = `${student.name.trim()}_${student.height}`;
+                if (!seenKeys.has(uniqueKey)) {
+                    seenKeys.add(uniqueKey);
+                    uniqueStudents.push(student);
+                }
+            });
+
+            // 更新全域陣列與快取，確保 LocalStorage 乾淨
+            if (uniqueStudents.length !== students.length) {
+                students = uniqueStudents;
+                localStorage.setItem('students', JSON.stringify(students));
+            }
+
+            // 繪製乾淨的下拉選單
             students.forEach(student => {
                 const option = document.createElement('option');
                 option.value = student.id;
@@ -330,6 +351,14 @@
             const age = document.getElementById('new-age').value;
             const height = document.getElementById('new-height').value;
 
+            // 防呆檢查：確保該學員尚未存在 (比對姓名與身高)
+            const isDuplicate = students.some(s => s.name === name && parseFloat(s.height) === parseFloat(height));
+            if (isDuplicate) {
+                alert(`【提示】學員「${name}」(身高: ${height}cm) 已存在系統中，請直接從下拉選單選擇！`);
+                addStudentForm.reset();
+                return;
+            }
+
             const newStudent = {
                 id: Date.now().toString(),
                 name,
@@ -360,7 +389,7 @@
             }
         });
 
-        // 2. 聯動載入學員資料與歷史紀錄 (增強報表抬頭資訊)
+        // 2. 聯動載入學員資料與歷史紀錄
         studentSelect.addEventListener('change', function() {
             const selectedId = this.value;
             
@@ -387,7 +416,10 @@
                 document.getElementById('report-name').textContent = student.name;
                 document.getElementById('report-age').textContent = student.age;
                 document.getElementById('report-height').textContent = student.height;
-                document.getElementById('report-time').textContent = new Date().toLocaleString('zh-TW', { hour12: false });
+                
+                // 自動帶入當日日期
+                const todayStr = new Date().toISOString().substring(0, 10);
+                document.getElementById('report-time').textContent = todayStr;
                 reportHeaderSec.classList.remove('hidden');
             }
 
@@ -491,7 +523,7 @@
             URL.revokeObjectURL(url);
         }
 
-        // 5. 從 JSON 檔案匯入資料 (直接覆蓋本地 LocalStorage)
+        // 5. 從 JSON 檔案匯入資料
         function importJson(input) {
             const file = input.files[0];
             if (!file) return;
@@ -502,7 +534,6 @@
                     const importedData = JSON.parse(e.target.result);
                     
                     if (importedData.students && importedData.records) {
-                        // 更新記憶體狀態與 LocalStorage
                         students = importedData.students;
                         records = importedData.records;
                         
@@ -510,7 +541,7 @@
                         localStorage.setItem('records', JSON.stringify(records));
                         
                         alert('資料匯入成功！系統將自動重新整理畫面。');
-                        location.reload(); // 重新整理頁面以載入新數據
+                        location.reload();
                     } else {
                         alert('匯入失敗：JSON 檔案格式不正確（找不到學員或紀錄陣列）。');
                     }
@@ -520,7 +551,34 @@
                 }
             };
             reader.readAsText(file);
-            input.value = ""; // 清空 input 狀態，允許重複匯入同一個檔案
+            input.value = "";
+        }
+
+        // 6. 智慧化命名 PDF 匯出檔案
+        function triggerPdfExport() {
+            const selectedId = studentSelect.value;
+            const originalTitle = document.title;
+
+            if (!selectedId) {
+                alert('請先選擇要匯出報告的學員！');
+                return;
+            }
+
+            const student = students.find(s => s.id === selectedId);
+            const todayStr = new Date().toISOString().substring(0, 10);
+
+            if (student) {
+                // 自動將瀏覽器標題更改為：學員姓名_當日日期 (列印/另存 PDF 時會自動作為預設檔名)
+                document.title = `${student.name}_${todayStr}`;
+            }
+
+            // 觸發瀏覽器列印視窗
+            window.print();
+
+            // 列印對話框關閉後，恢復原本的標題
+            setTimeout(() => {
+                document.title = originalTitle;
+            }, 1000);
         }
     </script>
 
