@@ -114,14 +114,16 @@
                                 <input type="number" id="f-visceral" step="1" min="1" max="50" placeholder="例如: 6" class="w-full border p-2 rounded-lg mt-1">
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-600">身體類型 (Body Type)</label>
+                                <label class="block text-xs text-gray-600">身體類型 (Body Type) - 1~7 類別</label>
                                 <select id="f-bodytype" class="w-full border p-2 rounded-lg mt-1 bg-white">
-                                    <option value="">-- 請選擇身體類型 --</option>
-                                    <option value="肌肉型">肌肉型 (Solid)</option>
-                                    <option value="標準型">標準型 (Standard)</option>
-                                    <option value="隱性肥胖">隱性肥胖 (Skinny Fat)</option>
-                                    <option value="肥胖型">肥胖型 (Obese)</option>
-                                    <option value="偏瘦型">偏瘦型 (Underweight)</option>
+                                    <option value="">-- 請選擇數字類別 --</option>
+                                    <option value="1">1 - 隱性肥胖 (瘦胖子)</option>
+                                    <option value="2">2 - 偏瘦型</option>
+                                    <option value="3">3 - 缺乏運動型</option>
+                                    <option value="4">4 - 標準肌肉型</option>
+                                    <option value="5">5 - 結實型</option>
+                                    <option value="6">6 - 隱性肥胖 (肌肉少、脂肪多)</option>
+                                    <option value="7">7 - 肥胖肌肉型</option>
                                 </select>
                             </div>
                         </div>
@@ -180,7 +182,7 @@
                                 <th scope="col" class="px-4 py-3 border-r">體脂率(%)</th>
                                 <th scope="col" class="px-4 py-3 border-r">水分</th>
                                 <th scope="col" class="px-4 py-3 border-r">內臟脂肪</th>
-                                <th scope="col" class="px-4 py-3 border-r">身體類型</th>
+                                <th scope="col" class="px-4 py-3 border-r">身體類型(1~7)</th>
                                 <th scope="col" class="px-4 py-3 border-r">基礎代謝</th>
                                 <th scope="col" class="px-4 py-3 border-r">右手肌</th>
                                 <th scope="col" class="px-4 py-3 border-r">左手肌</th>
@@ -311,7 +313,7 @@
                             <td class="px-4 py-3 border-r">${r.fat} %</td>
                             <td class="px-4 py-3 border-r">${r.water ? r.water + ' L' : '--'}</td>
                             <td class="px-4 py-3 border-r">${r.visceral || '--'}</td>
-                            <td class="px-4 py-3 border-r">${r.bodytype || '--'}</td>
+                            <td class="px-4 py-3 border-r">${r.bodytype ? '類別 ' + r.bodytype : '--'}</td>
                             <td class="px-4 py-3 border-r">${r.bmr} kcal</td>
                             <td class="px-4 py-3 border-r">${r.m_ra || '--'}</td>
                             <td class="px-4 py-3 border-r">${r.m_la || '--'}</td>
