@@ -41,7 +41,7 @@
                 </button>
                 <input type="file" id="import-file" accept=".json" class="hidden" onchange="importJson(this)">
                 <button onclick="document.getElementById('import-file').click()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center gap-2 transition text-sm">
-                    <i class="fa-solid fa-upload"></i> 匯入 JSON 紀錄
+                    <i class="fa-solid fa-upload"></i> 匯入/附加 JSON 紀錄
                 </button>
                 <button onclick="triggerPdfExport()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg cursor-pointer flex items-center gap-2 transition text-sm">
                     <i class="fa-solid fa-file-pdf"></i> 匯出橫向 A4 報告
@@ -123,10 +123,11 @@
 
                     <div>
                         <h3 class="text-md font-semibold text-indigo-900 border-b border-indigo-50 pb-1 mb-3">1. 核心身體組成數據</h3>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                             <div><label class="block text-xs text-gray-600">體重 (kg)</label><input type="number" id="f-weight" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
                             <div><label class="block text-xs text-gray-600">骨骼肌重 (kg)</label><input type="number" id="f-muscle" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
                             <div><label class="block text-xs text-gray-600">體脂肪率 (%)</label><input type="number" id="f-fat" step="0.1" required class="w-full border p-2 rounded-lg mt-1"></div>
+                            <div><label class="block text-xs text-gray-600">骨量 (kg)</label><input type="number" id="f-bone" step="0.1" required class="w-full border p-2 rounded-lg mt-1" placeholder="例如: 2.5"></div>
                             <div><label class="block text-xs text-gray-600">基礎代謝率 (kcal)</label><input type="number" id="f-bmr" step="1" required class="w-full border p-2 rounded-lg mt-1"></div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
@@ -139,16 +140,18 @@
                                 <input type="number" id="f-visceral" step="1" min="1" max="50" placeholder="例如: 6" class="w-full border p-2 rounded-lg mt-1">
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-600">身體類型 (1~7 類別)</label>
+                                <label class="block text-xs text-gray-600">身體類型 (9種分類)</label>
                                 <select id="f-bodytype" class="w-full border p-2 rounded-lg mt-1 bg-white">
-                                    <option value="">-- 請選擇數字類別 --</option>
-                                    <option value="1">1 - 隱性肥胖 (瘦胖子)</option>
-                                    <option value="2">2 - 偏瘦型</option>
-                                    <option value="3">3 - 缺乏運動型</option>
-                                    <option value="4">4 - 標準肌肉型</option>
-                                    <option value="5">5 - 結實型</option>
-                                    <option value="6">6 - 隱性肥胖 (肌肉少、脂肪多)</option>
-                                    <option value="7">7 - 肥胖肌肉型</option>
+                                    <option value="">-- 請選擇體型分類 --</option>
+                                    <option value="1.隱性肥胖型">1. 隱性肥胖型</option>
+                                    <option value="2.肥胖型">2. 肥胖型</option>
+                                    <option value="3.實胖型">3. 實胖型</option>
+                                    <option value="4.運動不足型">4. 運動不足型</option>
+                                    <option value="5.標準型">5. 標準型</option>
+                                    <option value="6.肌肉發達型">6. 肌肉發達型</option>
+                                    <option value="7.消瘦型">7. 消瘦型</option>
+                                    <option value="8.苗條型">8. 苗條型</option>
+                                    <option value="9.苗條肌肉型">9. 苗條肌肉型</option>
                                 </select>
                             </div>
                         </div>
@@ -194,7 +197,8 @@
             </section>
             
             <section class="no-print">
-                            </section>
+                
+            </section>
 
             <section class="bg-white p-6 rounded-xl shadow-sm">
                 <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2">
@@ -208,9 +212,10 @@
                                 <th scope="col" class="px-4 py-3 border-r">體重(kg)</th>
                                 <th scope="col" class="px-4 py-3 border-r">骨骼肌(kg)</th>
                                 <th scope="col" class="px-4 py-3 border-r">體脂率(%)</th>
+                                <th scope="col" class="px-4 py-3 border-r">骨量(kg)</th>
                                 <th scope="col" class="px-4 py-3 border-r">水分</th>
                                 <th scope="col" class="px-4 py-3 border-r">內臟脂肪</th>
-                                <th scope="col" class="px-4 py-3 border-r">身體類型(1~7)</th>
+                                <th scope="col" class="px-4 py-3 border-r">身體類型</th>
                                 <th scope="col" class="px-4 py-3 border-r">基礎代謝</th>
                                 <th scope="col" class="px-4 py-3 border-r">右手肌</th>
                                 <th scope="col" class="px-4 py-3 border-r">左手肌</th>
@@ -226,7 +231,7 @@
                         </thead>
                         <tbody id="history-table-body">
                             <tr class="border-b text-gray-400 text-center">
-                                <td colspan="18" class="py-6">尚未選擇學員或無歷史數據</td>
+                                <td colspan="19" class="py-6">尚未選擇學員或無歷史數據</td>
                             </tr>
                         </tbody>
                     </table>
@@ -297,7 +302,6 @@
         function updateStudentSelect() {
             studentSelect.innerHTML = '<option value="">-- 請選擇或搜尋學員 --</option>';
             
-            // 防呆處理：過濾掉姓名與身高完全重複的實體，僅保留第一筆
             const uniqueStudents = [];
             const seenKeys = new Set();
             
@@ -309,13 +313,11 @@
                 }
             });
 
-            // 更新全域陣列與快取，確保 LocalStorage 乾淨
             if (uniqueStudents.length !== students.length) {
                 students = uniqueStudents;
                 localStorage.setItem('students', JSON.stringify(students));
             }
 
-            // 繪製乾淨的下拉選單
             students.forEach(student => {
                 const option = document.createElement('option');
                 option.value = student.id;
@@ -351,7 +353,6 @@
             const age = document.getElementById('new-age').value;
             const height = document.getElementById('new-height').value;
 
-            // 防呆檢查：確保該學員尚未存在 (比對姓名與身高)
             const isDuplicate = students.some(s => s.name === name && parseFloat(s.height) === parseFloat(height));
             if (isDuplicate) {
                 alert(`【提示】學員「${name}」(身高: ${height}cm) 已存在系統中，請直接從下拉選單選擇！`);
@@ -397,7 +398,7 @@
             
             if (!selectedId) {
                 studentCard.classList.add('hidden');
-                historyTableBody.innerHTML = '<tr class="border-b text-gray-400 text-center"><td colspan="18" class="py-6">尚未選擇學員或無歷史數據</td></tr>';
+                historyTableBody.innerHTML = '<tr class="border-b text-gray-400 text-center"><td colspan="19" class="py-6">尚未選擇學員或無歷史數據</td></tr>';
                 
                 reportHeaderSec.classList.add('hidden');
                 updateChart([]);
@@ -406,18 +407,15 @@
 
             const student = students.find(s => s.id === selectedId);
             if (student) {
-                // 側邊欄卡片
                 document.getElementById('card-name').textContent = student.name;
                 document.getElementById('card-age').textContent = student.age;
                 document.getElementById('card-height').textContent = student.height;
                 studentCard.classList.remove('hidden');
 
-                // 列印報表抬頭 (A4 列印專用)
                 document.getElementById('report-name').textContent = student.name;
                 document.getElementById('report-age').textContent = student.age;
                 document.getElementById('report-height').textContent = student.height;
                 
-                // 自動帶入當日日期
                 const todayStr = new Date().toISOString().substring(0, 10);
                 document.getElementById('report-time').textContent = todayStr;
                 reportHeaderSec.classList.remove('hidden');
@@ -427,10 +425,10 @@
             historyTableBody.innerHTML = '';
 
             if (studentRecords.length === 0) {
-                historyTableBody.innerHTML = '<tr class="border-b text-gray-400 text-center"><td colspan="18" class="py-6">此學員目前無身體組成紀錄</td></tr>';
+                historyTableBody.innerHTML = '<tr class="border-b text-gray-400 text-center"><td colspan="19" class="py-6">此學員目前無身體組成紀錄</td></tr>';
                 updateChart([]);
             } else {
-                studentRecords.sort((a,b) => new Date(b.date) - new Date(a.date)); // 最新排在最上面
+                studentRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
                 updateChart(studentRecords);
 
                 studentRecords.forEach(r => {
@@ -440,9 +438,10 @@
                             <td class="px-4 py-3 border-r">${r.weight} kg</td>
                             <td class="px-4 py-3 border-r">${r.muscle} kg</td>
                             <td class="px-4 py-3 border-r">${r.fat} %</td>
+                            <td class="px-4 py-3 border-r">${r.bone ? r.bone + ' kg' : '--'}</td>
                             <td class="px-4 py-3 border-r">${r.water ? r.water + ' L' : '--'}</td>
                             <td class="px-4 py-3 border-r">${r.visceral || '--'}</td>
-                            <td class="px-4 py-3 border-r">${r.bodytype ? '類別 ' + r.bodytype : '--'}</td>
+                            <td class="px-4 py-3 border-r">${r.bodytype || '--'}</td>
                             <td class="px-4 py-3 border-r">${r.bmr} kcal</td>
                             <td class="px-4 py-3 border-r">${r.m_ra || '--'}</td>
                             <td class="px-4 py-3 border-r">${r.m_la || '--'}</td>
@@ -477,6 +476,7 @@
                 weight: document.getElementById('f-weight').value,
                 muscle: document.getElementById('f-muscle').value,
                 fat: document.getElementById('f-fat').value,
+                bone: document.getElementById('f-bone').value,
                 water: document.getElementById('f-water').value,
                 visceral: document.getElementById('f-visceral').value,
                 bodytype: document.getElementById('f-bodytype').value,
@@ -523,7 +523,7 @@
             URL.revokeObjectURL(url);
         }
 
-        // 5. 從 JSON 檔案匯入資料
+        // 5. 從 JSON 檔案匯入 (附加不覆蓋)
         function importJson(input) {
             const file = input.files[0];
             if (!file) return;
@@ -534,13 +534,52 @@
                     const importedData = JSON.parse(e.target.result);
                     
                     if (importedData.students && importedData.records) {
-                        students = importedData.students;
-                        records = importedData.records;
-                        
+                        let importedStudents = importedData.students || [];
+                        importedStudents.forEach(impStudent => {
+                            const isExist = students.some(s => 
+                                s.name.trim() === impStudent.name.trim() && 
+                                parseFloat(s.height) === parseFloat(impStudent.height)
+                            );
+                            if (!isExist) {
+                                const newStdId = Date.now().toString() + Math.floor(Math.random() * 1000);
+                                const oldId = impStudent.id;
+                                impStudent.id = newStdId;
+                                students.push(impStudent);
+                                
+                                importedData.records.forEach(rec => {
+                                    if (rec.studentId === oldId) {
+                                        rec.studentId = newStdId;
+                                    }
+                                });
+                            } else {
+                                const existingStd = students.find(s => 
+                                    s.name.trim() === impStudent.name.trim() && 
+                                    parseFloat(s.height) === parseFloat(impStudent.height)
+                                );
+                                if (existingStd) {
+                                    importedData.records.forEach(rec => {
+                                        if (rec.studentId === impStudent.id) {
+                                            rec.studentId = existingStd.id;
+                                        }
+                                    });
+                                }
+                            }
+                        });
+
+                        let importedRecords = importedData.records || [];
+                        importedRecords.forEach(impRec => {
+                            const isRecExist = records.some(r => 
+                                r.studentId === impRec.studentId && r.date === impRec.date
+                            );
+                            if (!isRecExist) {
+                                records.push(impRec);
+                            }
+                        });
+
                         localStorage.setItem('students', JSON.stringify(students));
                         localStorage.setItem('records', JSON.stringify(records));
                         
-                        alert('資料匯入成功！系統將自動重新整理畫面。');
+                        alert('資料附加成功！系統將自動重新整理。');
                         location.reload();
                     } else {
                         alert('匯入失敗：JSON 檔案格式不正確（找不到學員或紀錄陣列）。');
@@ -568,14 +607,11 @@
             const todayStr = new Date().toISOString().substring(0, 10);
 
             if (student) {
-                // 自動將瀏覽器標題更改為：學員姓名_當日日期 (列印/另存 PDF 時會自動作為預設檔名)
                 document.title = `${student.name}_${todayStr}`;
             }
 
-            // 觸發瀏覽器列印視窗
             window.print();
 
-            // 列印對話框關閉後，恢復原本的標題
             setTimeout(() => {
                 document.title = originalTitle;
             }, 1000);
